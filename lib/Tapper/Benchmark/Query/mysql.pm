@@ -1,0 +1,785 @@
+package Tapper::Benchmark::Query::mysql;
+
+use strict;
+use warnings;
+use feature 'switch';
+use base 'Tapper::Benchmark::Query';
+
+my %h_default_columns = (
+    'bench'          => 'b.bench',
+    'bench_unit'     => 'bu.bench_unit',
+    'bench_value'    => 'bv.bench_value',
+    'bench_value_id' => 'bv.bench_value_id',
+    'bench_date'     => 'bv.created_at',
+);
+
+sub create_where_clause {
+
+    my ( $s_column_name, $ar_value ) = @_;
+
+    my $s_where_clause = q##;
+    if ( $ar_value->[0] eq 'not like' ) {
+        $s_where_clause = "$s_column_name NOT LIKE ?";
+    }
+    elsif ( $ar_value->[0] eq 'like' ) {
+        $s_where_clause = "$s_column_name LIKE ?";
+    }
+    elsif (
+           $ar_value->[0] eq '<'
+        || $ar_value->[0] eq '>'
+        || $ar_value->[0] eq '<='
+        || $ar_value->[0] eq '>='
+    ) {
+        $s_where_clause = "$s_column_name $ar_value->[0] ?";
+    }
+    elsif ( $ar_value->[0] eq '=' ) {
+        if ( $#{$ar_value} > 1 ) {
+            $s_where_clause = "$s_column_name IN (" . (join ',', map {'?'} @{$ar_value}) . ')';
+        }
+        else {
+            $s_where_clause = "$s_column_name = ?";
+        }
+    }
+    elsif ( $ar_value->[0] eq '!=' ) {
+        if ( $#{$ar_value} > 1 ) {
+            $s_where_clause = "$s_column_name NOT IN (" . (join ',', map {'?'} @{$ar_value}) . ')';
+        }
+        else {
+            $s_where_clause = "$s_column_name != ?";
+        }
+    }
+    else {
+        require Carp;
+        Carp::confess("unknown operator '$ar_value->[0]'");
+        return;
+    }
+
+    return $s_where_clause;
+
+}
+
+sub create_select_column {
+
+    my ( $or_self, $ar_select, $i_counter, $b_aggregate_all ) = @_;
+
+    my $s_aggr_func           = q##;
+    my ( $s_aggr, $s_column ) = @{$ar_select};
+
+    AGGR: {
+        given( $s_aggr ) {
+            when ( q##   ) {
+                # aggregate all columns if a single column is aggregated
+                if ( $b_aggregate_all ) {
+                    $s_aggr = $or_self->{config}{default_aggregation};
+                    redo AGGR;
+                }
+            }
+            when ( 'min' ) { $s_aggr_func = 'MIN('              }
+            when ( 'max' ) { $s_aggr_func = 'MAX('              }
+            when ( 'avg' ) { $s_aggr_func = 'AVG('              }
+            when ( 'sum' ) { $s_aggr_func = 'SUM('              }
+            when ( 'cnt' ) { $s_aggr_func = 'COUNT('            }
+            when ( 'cnd' ) { $s_aggr_func = 'COUNT( DISTINCT'   }
+            default {
+                require Carp;
+                Carp::confess("unknown aggregate function '$s_aggr'");
+                return;
+            }
+        }
+    } # AGGR
+
+    if ( $s_column ~~ %h_default_columns ) {
+        if ( $s_aggr ) {
+            return ( '', "$s_aggr_func $h_default_columns{$s_column} ) AS " . $s_aggr . "_$s_column" );
+        }
+        else {
+            return ( '', "$h_default_columns{$s_column} AS $s_column" );
+        }
+    }
+    else {
+        if ( $s_aggr ) {
+            return ( $s_column, "$s_aggr_func bav$i_counter.bench_additional_value ) AS " . $s_aggr . "_$s_column" );
+        }
+        else {
+            return ( $s_column, "bav$i_counter.bench_additional_value AS $s_column" );
+        }
+    }
+
+}
+
+sub create_period_check {
+
+    my ( $s_column, $dt_from, $dt_to ) = @_;
+
+    my @a_vals;
+    my $s_where;
+    if ( $dt_from ) {
+        if ( my ( $s_date, $s_time ) = $dt_from =~ /(\d{4}-\d{2}-\d{2})( \d{2}:\d{2}:\d{2})?/ ) {
+            $s_where .= "\nAND $s_column > ?";
+            push @a_vals, $s_date . ( $s_time || ' 00:00:00' );
+        }
+        else {
+            require Carp;
+            Carp::confess(q#unknown date format for 'date_from'#);
+            return;
+        }
+    }
+    if ( $dt_to ) {
+        if ( my ( $s_date, $s_time ) = $dt_to =~ /(\d{4}-\d{2}-\d{2})( \d{2}:\d{2}:\d{2})?/ ) {
+            $s_where .= "\nAND $s_column < ?";
+            push @a_vals, $s_date . ( $s_time || ' 23:59:59' );
+        }
+        else {
+            require Carp;
+            Carp::confess(q#unknown date format for 'date_to'#);
+            return;
+        }
+    }
+
+    return {
+        vals  => \@a_vals,
+        where => $s_where,
+    };
+
+}
+
+sub select_benchmark_values {
+
+    my ( $or_self, $hr_search ) = @_;
+
+    # deep copy hash
+    require JSON::XS;
+    $hr_search = JSON::XS::decode_json(
+        JSON::XS::encode_json( $hr_search )
+    );
+
+    my (
+        $s_limit,
+        $s_offset,
+        $s_order_by,
+        @a_select,
+        @a_from,
+        @a_from_vals,
+        @a_where,
+        @a_where_vals,
+    ) = (
+        q##,
+        q##,
+        q##,
+    );
+
+    # limit clause
+    if ( $hr_search->{limit} ) {
+        if ( $hr_search->{limit} =~ /^\d+$/ ) {
+            $s_limit = "LIMIT $hr_search->{limit}";
+        }
+        else {
+            require Carp;
+            Carp::confess("invalid limit value '$hr_search->{limit}'");
+            return;
+        }
+    }
+
+    # offset clause
+    if ( $hr_search->{offset} ) {
+        if ( $hr_search->{offset} =~ /^\d+$/ ) {
+            $s_offset = "OFFSET $hr_search->{offset}";
+        }
+        else {
+            require Carp;
+            Carp::confess("invalid offset value '$hr_search->{offset}'");
+            return;
+        }
+    }
+
+    # where clause - additionals
+    my $i_counter = 0;
+    if ( $hr_search->{where} ) {
+        for my $ar_where ( @{$hr_search->{where}} ) {
+            if ( $ar_where->[1] ~~ %h_default_columns ) {
+                my $s_column = splice( @{$ar_where}, 1, 1 );
+                push @a_where, create_where_clause( $h_default_columns{$s_column}, $ar_where );
+                push @a_where_vals , @{$ar_where}[1..$#{$ar_where}];
+            }
+            else {
+                my $hr_additional_type = $or_self
+                    ->select_addtype_by_name( splice( @{$ar_where}, 1, 1 ) )
+                    ->fetchrow_hashref()
+                ;
+                if ( !$hr_additional_type || !$hr_additional_type->{bench_additional_type_id} ) {
+                    require Carp;
+                    Carp::confess("benchmark additional value '$ar_where->[1]' not exists");
+                    return;
+                }
+                push @a_from, "
+                    JOIN (
+                        $or_self->{config}{tables}{additional_relation_table} bar$i_counter
+                        JOIN $or_self->{config}{tables}{additional_value_table} bav$i_counter
+                            ON ( bav$i_counter.bench_additional_value_id = bar$i_counter.bench_additional_value_id )
+                    )
+                        ON (
+                            bar$i_counter.bench_value_id = bv.bench_value_id
+                            AND bav$i_counter.bench_additional_type_id = ?
+                        )
+                ";
+                push @a_from_vals, $hr_additional_type->{bench_additional_type_id};
+                push @a_where, create_where_clause( "bav$i_counter.bench_additional_value", $ar_where );
+                push @a_where_vals , @{$ar_where}[1..$#{$ar_where}];
+                $i_counter++;
+            }
+        }
+    }
+
+    # select clause
+    my $b_aggregate_all = 0;
+    if ( $hr_search->{select} ) {
+        for my $i_counter ( 0..$#{$hr_search->{select}} ) {
+            if ( ref $hr_search->{select}[$i_counter] ne 'ARRAY' ) {
+                $hr_search->{select}[$i_counter] = ['',$hr_search->{select}[$i_counter]];
+            }
+            elsif ( !$b_aggregate_all && $hr_search->{select}[$i_counter][0] ne q## ) {
+                $b_aggregate_all = 1;
+                for my $s_clause (qw/ order_by limit offset /) {
+                    if ( $hr_search->{$s_clause} ) {
+                        require Carp;
+                        Carp::confess("cannot use '$s_clause' with aggregation");
+                    }
+                }
+            }
+        }
+    }
+    push @{$hr_search->{select} ||= []}, map {['',$_]} keys %h_default_columns;
+
+    for my $ar_select ( @{$hr_search->{select}} ) {
+
+        my ( $s_column, $s_select ) = $or_self->create_select_column(
+            $ar_select, $i_counter, $b_aggregate_all,
+        );
+
+        push @a_select, $s_select;
+
+        if ( $s_column ) {
+
+            my $hr_additional_type = $or_self
+                ->select_addtype_by_name( $s_column )
+                ->fetchrow_hashref()
+            ;
+            if ( !$hr_additional_type || !$hr_additional_type->{bench_additional_type_id} ) {
+                require Carp;
+                Carp::confess("benchmark additional value '$s_column' not exists");
+                return;
+            }
+
+            push @a_from_vals, $hr_additional_type->{bench_additional_type_id};
+            push @a_from, "
+                LEFT JOIN (
+                    $or_self->{config}{tables}{additional_relation_table} bar$i_counter
+                    JOIN $or_self->{config}{tables}{additional_value_table} bav$i_counter
+                        ON ( bav$i_counter.bench_additional_value_id = bar$i_counter.bench_additional_value_id )
+                )
+                    ON (
+                        bar$i_counter.bench_value_id = bv.bench_value_id
+                        AND bav$i_counter.bench_additional_type_id = ?
+                    )
+            ";
+            $i_counter++;
+        }
+
+    }
+
+    # order_by clause
+    if ( $hr_search->{order_by} ) {
+        my @a_order_by_possible  = keys %h_default_columns;
+        my @a_order_by_direction = qw/ ASC DESC /;
+        if ( $hr_search->{select} ) {
+            push @a_order_by_possible, map { $_->[1] } @{$hr_search->{select}};
+        }
+        my @a_order_by;
+        for my $order_column ( @{$hr_search->{order_by}} ) {
+            if ( ref $order_column ) {
+                if ( $order_column->[0] ~~ @a_order_by_possible ) {
+                    if ( $order_column->[1] ~~ @a_order_by_direction ) {
+                        if ( $order_column->[0] ~~ %h_default_columns ) {
+                            push @a_order_by, "$h_default_columns{$order_column->[0]} $order_column->[1]";
+                        }
+                        else {
+                            push @a_order_by, "$order_column->[0] $order_column->[1]";
+                        }
+                    }
+                    else {
+                        require Carp;
+                        Carp::confess("unknown order by direction '$order_column->[1]'");
+                        return;
+                    }
+                }
+                else {
+                    require Carp;
+                    Carp::confess("unknown order by column '$order_column->[0]'");
+                    return;
+                }
+            }
+            else {
+                if ( $order_column ~~ @a_order_by_possible ) {
+                    if ( $order_column ~~ %h_default_columns ) {
+                        push @a_order_by, "$h_default_columns{$order_column} ASC";
+                    }
+                    else {
+                        push @a_order_by, "$order_column ASC";
+                    }
+                }
+                else {
+                    require Carp;
+                    Carp::confess("unknown order by column '$order_column'");
+                    return;
+                }
+            }
+        }
+        $s_order_by = 'ORDER BY ' . (join ', ', @a_order_by)
+    }
+
+    return $or_self->execute_query(
+        "
+            SELECT
+                " . ( join ",\n", map {"$_"} @a_select ) . "
+            FROM
+                $or_self->{config}{tables}{benchmark_table} b
+                JOIN $or_self->{config}{tables}{benchmark_value_table} bv
+                    ON ( bv.bench_id = bv.bench_id )
+                LEFT JOIN $or_self->{config}{tables}{unit_table} bu
+                    ON ( bu.bench_unit_id = b.bench_unit_id )
+                " . ( join "\n", @a_from ) . "
+            WHERE
+                b.active = 1
+                AND bv.active = 1
+                " . ( join "\n", map { "AND $_" } @a_where ) . "
+            $s_order_by
+            $s_limit
+            $s_offset
+        ",
+        @a_from_vals,
+        @a_where_vals,
+    );
+
+}
+
+sub select_addtype_by_name {
+
+    my ( $or_self, @a_vals ) = @_;
+
+    return $or_self->execute_query( "
+        SELECT bench_additional_type_id
+        FROM $or_self->{config}{tables}{additional_type_table}
+        WHERE bench_additional_type = ?
+    ", @a_vals );
+
+}
+
+sub select_min_extrapolation_type {
+
+    my ( $or_self, @a_vals ) = @_;
+
+    return $or_self->execute_query( "
+        SELECT bench_extrapolation_type_id
+        FROM $or_self->{config}{tables}{extrapolation_type_table}
+        ORDER BY bench_extrapolation_type_rank ASC
+        LIMIT 1
+    " );
+
+}
+
+sub select_extrapolation_type {
+
+    my ( $or_self, @a_vals ) = @_;
+
+    return $or_self->execute_query( "
+        SELECT
+            bench_extrapolation_type_id,
+            bench_extrapolation_type_rank,
+            datetime_strftime_pattern
+        FROM
+            $or_self->{config}{tables}{extrapolation_type_table}
+        WHERE
+            bench_extrapolation_type = ?
+    ", @a_vals );
+
+}
+
+sub select_check_extrapolated_values {
+
+    my ( $or_self, $hr_vals ) = @_;
+
+    if (! $hr_vals->{extrapolation_type_id} ) {
+        require Carp;
+        Carp::confess(q#required parameter 'extrapolation_type_id' is missing#);
+        return;
+    }
+
+    my $hr_period_check = create_period_check(
+        'bv.created_at', $hr_vals->{date_from}, $hr_vals->{date_to}
+    );
+
+    return $or_self->execute_query(
+        "
+            SELECT
+                bv.bench_value_id
+            FROM
+                bench_values bv
+                JOIN bench_extrapolation_types bet
+                    ON ( bv.bench_extrapolation_type_id = bet.bench_extrapolation_type_id )
+            WHERE
+                bet.bench_extrapolation_type_rank > (
+                    SELECT beti.bench_extrapolation_type_rank
+                    FROM bench_extrapolation_types beti
+                    WHERE bench_extrapolation_type_id = ?
+                )
+                $hr_period_check->{where}
+            LIMIT
+                1
+        ",
+        $hr_vals->{extrapolation_type_id},
+        @{$hr_period_check->{vals}},
+    );
+
+}
+
+sub select_data_values_for_extrapolation {
+
+    my ( $or_self, $hr_vals ) = @_;
+
+    my $hr_period_check = create_period_check(
+        'bv.created_at', $hr_vals->{date_from}, $hr_vals->{date_to}
+    );
+
+    my @a_addexclude_vals;
+    my $s_addexclude_where = q##;
+    if ( $hr_vals->{exclude_additionals} && @{$hr_vals->{exclude_additionals}} ) {
+        $s_addexclude_where = 'AND bav.bench_additional_type_id NOT IN (' . (join ',', map {'?'} @{$hr_vals->{exclude_additionals}}) . ')';
+        push @a_addexclude_vals, @{$hr_vals->{exclude_additionals}};
+    }
+
+    return $or_self->execute_query(
+        "
+            SELECT
+                b.bench_id,
+                bv.bench_value_id,
+                bv.created_at,
+                bv.bench_value,
+                bet.bench_extrapolation_type_rank,
+                GROUP_CONCAT(
+                        bav.bench_additional_type_id,
+                        '|',
+                        bav.bench_additional_value_id
+                    ORDER BY
+                        bav.bench_additional_type_id,
+                        bav.bench_additional_value_id
+                    SEPARATOR
+                        '-'
+                ) AS additionals
+            FROM
+                benchs b
+                JOIN bench_values bv
+                    ON ( bv.bench_id = b.bench_id )
+                JOIN bench_extrapolation_types bet
+                    ON ( bet.bench_extrapolation_type_id = bv.bench_extrapolation_type_id )
+                LEFT JOIN (
+                    bench_additional_relations bar
+                    JOIN bench_additional_values bav
+                        ON ( bav.bench_additional_value_id = bar.bench_additional_value_id )
+                )
+                    ON (
+                        bar.active = 1
+                        AND bar.bench_value_id = bv.bench_value_id
+                        $s_addexclude_where
+                    )
+            WHERE
+                b.active = 1
+                AND bv.active = 1
+                $hr_period_check->{where}
+            GROUP BY
+                bet.bench_extrapolation_type_rank,
+                b.bench_id,
+                bv.created_at,
+                bv.bench_value,
+                bv.bench_value_id
+            ORDER BY
+                b.bench_id,
+                additionals,
+                bv.created_at
+        ",
+        @a_addexclude_vals,
+        @{$hr_period_check->{vals}},
+    );
+}
+
+sub select_benchmark {
+
+    my ( $or_self, @a_vals ) = @_;
+
+    return $or_self->execute_query( "
+        SELECT bench_id
+        FROM $or_self->{config}{tables}{benchmark_table}
+        WHERE bench = ?
+    ", @a_vals );
+
+}
+
+sub select_unit {
+
+    my ( $or_self, @a_vals ) = @_;
+
+    return $or_self->execute_query( "
+        SELECT bench_unit_id
+        FROM $or_self->{config}{tables}{unit_table}
+        WHERE bench_unit = ?
+    ", @a_vals );
+
+}
+
+sub select_addtype {
+
+    my ( $or_self, @a_vals ) = @_;
+
+    return $or_self->execute_query( "
+        SELECT bench_additional_type_id
+        FROM $or_self->{config}{tables}{additional_type_table}
+        WHERE bench_additional_type = ?
+    ", @a_vals );
+
+}
+
+sub select_addvalue {
+
+    my ( $or_self, @a_vals ) = @_;
+
+    return $or_self->execute_query( "
+        SELECT bench_additional_value_id
+        FROM $or_self->{config}{tables}{additional_value_table}
+        WHERE bench_additional_type_id = ? AND bench_additional_value = ?
+    ", @a_vals );
+
+}
+
+sub select_addtyperelation {
+
+    my ( $or_self, @a_vals ) = @_;
+
+    return $or_self->execute_query( "
+        SELECT bench_id, bench_additional_type_id, created_at
+        FROM $or_self->{config}{tables}{additional_type_relation_table}
+        WHERE bench_id = ? AND bench_additional_type_id = ?
+    ", @a_vals );
+
+}
+
+sub insert_addtyperelation {
+
+    my ( $or_self, @a_vals ) = @_;
+
+    return $or_self->execute_query( "
+        INSERT INTO $or_self->{config}{tables}{additional_type_relation_table}
+            ( bench_id, bench_additional_type_id, created_at )
+        VALUES
+            ( ?, ?, NOW() )
+    ", @a_vals );
+
+}
+
+sub insert_unit {
+
+    my ( $or_self, @a_vals ) = @_;
+
+    return $or_self->execute_query( "
+        INSERT INTO $or_self->{config}{tables}{unit_table}
+            ( bench_unit, created_at )
+        VALUES
+            ( ?, NOW() )
+    ", @a_vals );
+
+}
+
+sub insert_benchmark {
+
+    my ( $or_self, @a_vals ) = @_;
+
+    return $or_self->execute_query( "
+        INSERT INTO $or_self->{config}{tables}{benchmark_table}
+            ( bench, bench_unit_id, active, created_at )
+        VALUES
+            ( ?, ?, 1, NOW() )
+    ", @a_vals );
+
+}
+
+sub insert_benchmark_value {
+
+    my ( $or_self, @a_vals ) = @_;
+
+    return $or_self->execute_query( "
+        INSERT INTO $or_self->{config}{tables}{benchmark_value_table}
+            ( bench_id, bench_extrapolation_type_id, bench_value, active, created_at )
+        VALUES
+            ( ?, ?, ?, 1, NOW() )
+    ", @a_vals );
+
+}
+
+sub copy_additional_values {
+
+    my ( $or_self, $hr_vals ) = @_;
+
+    for my $s_param (qw/ new_bench_value_id old_bench_value_id /) {
+        if (! $hr_vals->{$s_param} ) {
+            require Carp;
+            Carp::confess("missing parameter '$s_param'");
+            return;
+        }
+    }
+
+    return $or_self->execute_query( "
+        INSERT INTO $or_self->{config}{tables}{additional_relation_table}
+            ( bench_value_id, bench_additional_value_id, active, created_at )
+        SELECT
+            ?, bench_additional_value_id, 1, NOW()
+        FROM
+            $or_self->{config}{tables}{additional_relation_table}
+        WHERE
+            bench_value_id = ?
+    ", @{$hr_vals}{qw/ new_bench_value_id old_bench_value_id /} );
+
+}
+
+sub copy_benchmark_backup_value {
+
+    my ( $or_self, $hr_vals ) = @_;
+
+    for my $s_param (qw/ new_bench_value_id old_bench_value_id /) {
+        if (! $hr_vals->{$s_param} ) {
+            require Carp;
+            Carp::confess("missing parameter '$s_param'");
+            return;
+        }
+    }
+
+    return $or_self->execute_query( "
+        INSERT INTO $or_self->{config}{tables}{benchmark_backup_value_table}
+            ( bench_value_id, bench_id, bench_extrapolation_type_id, bench_value, active, created_at )
+        SELECT
+            ?, bench_id, bench_extrapolation_type_id, bench_value, active, created_at
+        FROM
+            $or_self->{config}{tables}{benchmark_value_table}
+        WHERE
+            bench_value_id = ?
+    ", @{$hr_vals}{qw/ new_bench_value_id old_bench_value_id /} );
+
+}
+
+sub copy_benchmark_backup_additional_relations {
+
+    my ( $or_self, $hr_vals ) = @_;
+
+    for my $s_param (qw/ new_bench_value_id old_bench_value_id /) {
+        if (! $hr_vals->{$s_param} ) {
+            require Carp;
+            Carp::confess("missing parameter '$s_param'");
+            return;
+        }
+    }
+
+    return $or_self->execute_query( "
+        INSERT INTO $or_self->{config}{tables}{backup_additional_relation_table}
+            ( bench_backup_value_id, bench_additional_value_id, active, created_at )
+        SELECT
+            ?, bench_additional_value_id, active, created_at
+        FROM
+            $or_self->{config}{tables}{additional_relation_table}
+        WHERE
+            bench_value_id = ?
+    ", @{$hr_vals}{qw/ new_bench_value_id old_bench_value_id /} );
+
+}
+
+sub insert_addtype {
+
+    my ( $or_self, @a_vals ) = @_;
+
+    return $or_self->execute_query( "
+        INSERT INTO $or_self->{config}{tables}{additional_type_table}
+            ( bench_additional_type, created_at )
+        VALUES
+            ( ?, NOW() )
+    ", @a_vals );
+
+}
+
+sub insert_addvalue {
+
+    my ( $or_self, @a_vals ) = @_;
+
+    return $or_self->execute_query( "
+        INSERT INTO $or_self->{config}{tables}{additional_value_table}
+            ( bench_additional_type_id, bench_additional_value, created_at )
+        VALUES
+            ( ?, ?, NOW() )
+    ", @a_vals );
+
+}
+
+sub insert_addvaluerelation {
+
+    my ( $or_self, @a_vals ) = @_;
+
+    return $or_self->execute_query( "
+        INSERT INTO $or_self->{config}{tables}{additional_relation_table}
+            ( bench_value_id, bench_additional_value_id, active, created_at )
+        VALUES
+            ( ?, ?, 1, NOW() )
+    ", @a_vals );
+
+}
+
+sub update_benchmark_backup_value {
+
+    my ( $or_self, $hr_vals ) = @_;
+
+    return $or_self->execute_query( "
+        UPDATE $or_self->{config}{tables}{benchmark_backup_value_table}
+        SET bench_value_id = ?
+        WHERE bench_value_id = ?
+    ", @{$hr_vals}{qw/
+        new_bench_value_id
+        old_bench_value_id
+    /} );
+
+}
+
+sub delete_benchmark_additional_relations {
+
+    my ( $or_self, @a_vals ) = @_;
+
+    return $or_self->execute_query( "
+        DELETE FROM $or_self->{config}{tables}{additional_relation_table}
+        WHERE bench_value_id = ?
+    ", @a_vals );
+
+}
+
+sub delete_benchmark_value {
+
+    my ( $or_self, @a_vals ) = @_;
+
+    return $or_self->execute_query( "
+        DELETE FROM $or_self->{config}{tables}{benchmark_value_table}
+        WHERE bench_value_id = ?
+    ", @a_vals );
+
+}
+
+1;
+
+__END__
+
+=pod
+
+=head1 NAME
+
+Tapper::Benchmark::Query::mysql - Base class for the database work used by Tapper::Benchmark when MySQL is used
