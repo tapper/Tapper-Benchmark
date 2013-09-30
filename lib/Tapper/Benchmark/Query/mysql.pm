@@ -299,11 +299,15 @@ sub select_benchmark_values {
             if ( ref $order_column ) {
                 if ( $order_column->[0] ~~ @a_order_by_possible ) {
                     if ( $order_column->[1] ~~ @a_order_by_direction ) {
+                        my $s_numeric_cast = q##;
+                        if ( $order_column->[2] && $order_column->[2]{numeric} ) {
+                            $s_numeric_cast = '0 + ';
+                        }
                         if ( $order_column->[0] ~~ %h_default_columns ) {
-                            push @a_order_by, "$h_default_columns{$order_column->[0]} $order_column->[1]";
+                            push @a_order_by, "$s_numeric_cast$h_default_columns{$order_column->[0]} $order_column->[1]";
                         }
                         else {
-                            push @a_order_by, "$order_column->[0] $order_column->[1]";
+                            push @a_order_by, "$s_numeric_cast$order_column->[0] $order_column->[1]";
                         }
                     }
                     else {
@@ -374,43 +378,43 @@ sub select_addtype_by_name {
 
 }
 
-sub select_min_extrapolation_type {
+sub select_min_subsume_type {
 
     my ( $or_self, @a_vals ) = @_;
 
     return $or_self->execute_query( "
-        SELECT bench_extrapolation_type_id
-        FROM $or_self->{config}{tables}{extrapolation_type_table}
-        ORDER BY bench_extrapolation_type_rank ASC
+        SELECT bench_subsume_type_id
+        FROM $or_self->{config}{tables}{subsume_type_table}
+        ORDER BY bench_subsume_type_rank ASC
         LIMIT 1
     " );
 
 }
 
-sub select_extrapolation_type {
+sub select_subsume_type {
 
     my ( $or_self, @a_vals ) = @_;
 
     return $or_self->execute_query( "
         SELECT
-            bench_extrapolation_type_id,
-            bench_extrapolation_type_rank,
+            bench_subsume_type_id,
+            bench_subsume_type_rank,
             datetime_strftime_pattern
         FROM
-            $or_self->{config}{tables}{extrapolation_type_table}
+            $or_self->{config}{tables}{subsume_type_table}
         WHERE
-            bench_extrapolation_type = ?
+            bench_subsume_type = ?
     ", @a_vals );
 
 }
 
-sub select_check_extrapolated_values {
+sub select_check_subsumed_values {
 
     my ( $or_self, $hr_vals ) = @_;
 
-    if (! $hr_vals->{extrapolation_type_id} ) {
+    if (! $hr_vals->{subsume_type_id} ) {
         require Carp;
-        Carp::confess(q#required parameter 'extrapolation_type_id' is missing#);
+        Carp::confess(q#required parameter 'subsume_type_id' is missing#);
         return;
     }
 
@@ -424,25 +428,25 @@ sub select_check_extrapolated_values {
                 bv.bench_value_id
             FROM
                 bench_values bv
-                JOIN bench_extrapolation_types bet
-                    ON ( bv.bench_extrapolation_type_id = bet.bench_extrapolation_type_id )
+                JOIN bench_subsume_types bet
+                    ON ( bv.bench_subsume_type_id = bet.bench_subsume_type_id )
             WHERE
-                bet.bench_extrapolation_type_rank > (
-                    SELECT beti.bench_extrapolation_type_rank
-                    FROM bench_extrapolation_types beti
-                    WHERE bench_extrapolation_type_id = ?
+                bet.bench_subsume_type_rank > (
+                    SELECT beti.bench_subsume_type_rank
+                    FROM bench_subsume_types beti
+                    WHERE bench_subsume_type_id = ?
                 )
                 $hr_period_check->{where}
             LIMIT
                 1
         ",
-        $hr_vals->{extrapolation_type_id},
+        $hr_vals->{subsume_type_id},
         @{$hr_period_check->{vals}},
     );
 
 }
 
-sub select_data_values_for_extrapolation {
+sub select_data_values_for_subsume {
 
     my ( $or_self, $hr_vals ) = @_;
 
@@ -464,7 +468,7 @@ sub select_data_values_for_extrapolation {
                 bv.bench_value_id,
                 bv.created_at,
                 bv.bench_value,
-                bet.bench_extrapolation_type_rank,
+                bet.bench_subsume_type_rank,
                 GROUP_CONCAT(
                         bav.bench_additional_type_id,
                         '|',
@@ -479,8 +483,8 @@ sub select_data_values_for_extrapolation {
                 benchs b
                 JOIN bench_values bv
                     ON ( bv.bench_id = b.bench_id )
-                JOIN bench_extrapolation_types bet
-                    ON ( bet.bench_extrapolation_type_id = bv.bench_extrapolation_type_id )
+                JOIN bench_subsume_types bet
+                    ON ( bet.bench_subsume_type_id = bv.bench_subsume_type_id )
                 LEFT JOIN (
                     bench_additional_relations bar
                     JOIN bench_additional_values bav
@@ -496,7 +500,7 @@ sub select_data_values_for_extrapolation {
                 AND bv.active = 1
                 $hr_period_check->{where}
             GROUP BY
-                bet.bench_extrapolation_type_rank,
+                bet.bench_subsume_type_rank,
                 b.bench_id,
                 bv.created_at,
                 bv.bench_value,
@@ -616,7 +620,7 @@ sub insert_benchmark_value {
 
     return $or_self->execute_query( "
         INSERT INTO $or_self->{config}{tables}{benchmark_value_table}
-            ( bench_id, bench_extrapolation_type_id, bench_value, active, created_at )
+            ( bench_id, bench_subsume_type_id, bench_value, active, created_at )
         VALUES
             ( ?, ?, ?, 1, NOW() )
     ", @a_vals );
@@ -662,9 +666,9 @@ sub copy_benchmark_backup_value {
 
     return $or_self->execute_query( "
         INSERT INTO $or_self->{config}{tables}{benchmark_backup_value_table}
-            ( bench_value_id, bench_id, bench_extrapolation_type_id, bench_value, active, created_at )
+            ( bench_value_id, bench_id, bench_subsume_type_id, bench_value, active, created_at )
         SELECT
-            ?, bench_id, bench_extrapolation_type_id, bench_value, active, created_at
+            ?, bench_id, bench_subsume_type_id, bench_value, active, created_at
         FROM
             $or_self->{config}{tables}{benchmark_value_table}
         WHERE

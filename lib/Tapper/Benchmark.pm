@@ -5,7 +5,7 @@ use warnings;
 
 my ( %h_objects, %h_db_cache );
 
-my $fn_add_extrapolated_point = sub {
+my $fn_add_subsumed_point = sub {
 
     my ( $or_self, $hr_atts ) = @_;
 
@@ -13,7 +13,7 @@ my $fn_add_extrapolated_point = sub {
 
     eval {
 
-        # insert extrapolated benchmark value
+        # insert subsumed benchmark value
         $h_objects{$or_self}{query}->insert_benchmark_value(
             $hr_atts->{rows}[0]{bench_id},
             $hr_atts->{type_id},
@@ -24,7 +24,7 @@ my $fn_add_extrapolated_point = sub {
             'bench_value_id',
         );
 
-        # insert extrapolated benchmark additional values
+        # insert subsumed benchmark additional values
         $h_objects{$or_self}{query}->copy_additional_values({
             new_bench_value_id => $i_bench_value_id,
             old_bench_value_id => $hr_atts->{rows}[0]{bench_value_id},
@@ -32,7 +32,7 @@ my $fn_add_extrapolated_point = sub {
 
         for my $hr_backup_row ( @{$hr_atts->{rows}} ) {
 
-            if ( $hr_backup_row->{bench_extrapolation_type_rank} == 1 ) {
+            if ( $hr_backup_row->{bench_subsume_type_rank} == 1 ) {
                 if ( $hr_atts->{backup} ) {
                     # copy data rows to backup table
                     $h_objects{$or_self}{query}->copy_benchmark_backup_value({
@@ -175,10 +175,10 @@ sub add_single_benchmark {
         && @{$hr_benchmark->{data}}
     ) {
 
-        my $i_benchmark_extrapolation_type_id = $h_objects{$or_self}{query}
-            ->select_min_extrapolation_type()
+        my $i_benchmark_subsume_type_id = $h_objects{$or_self}{query}
+            ->select_min_subsume_type()
             ->fetchrow_hashref()
-            ->{bench_extrapolation_type_id}
+            ->{bench_subsume_type_id}
         ;
 
         my $i_counter = 1;
@@ -196,7 +196,7 @@ sub add_single_benchmark {
 
             # benchmark value
             $h_objects{$or_self}{query}->insert_benchmark_value(
-                $i_benchmark_id, $i_benchmark_extrapolation_type_id, $hr_point->{value},
+                $i_benchmark_id, $i_benchmark_subsume_type_id, $hr_point->{value},
             );
             my $i_benchmark_value_id = $h_objects{$or_self}{query}->last_insert_id(
                 $hr_config->{tables}{benchmark_value_table},
@@ -397,11 +397,11 @@ sub search_hash {
 
 }
 
-sub extrapolate {
+sub subsume {
 
     my ( $or_self, $hr_options ) = @_;
 
-    for my $s_parameter (qw/ extrapolation_type /) {
+    for my $s_parameter (qw/ subsume_type /) {
         if (! $hr_options->{$s_parameter}) {
             require Carp;
             Carp::confess("missing parameter '$s_parameter'");
@@ -409,32 +409,36 @@ sub extrapolate {
         }
     }
 
-    # check if extrapolation type exists
-    my $hr_extrapolation_type = $h_objects{$or_self}{query}
-        ->select_extrapolation_type( $hr_options->{extrapolation_type} )
+    # check if subsume type exists
+    my $hr_subsume_type = $h_objects{$or_self}{query}
+        ->select_subsume_type( $hr_options->{subsume_type} )
         ->fetchrow_hashref()
     ;
-
-    if (! $hr_extrapolation_type ) {
+    if (! $hr_subsume_type ) {
         require Carp;
-        Carp::confess("extrapolation type '$hr_options->{extrapolation_type}' not exists");
+        Carp::confess("subsume type '$hr_options->{subsume_type}' not exists");
+        return;
+    }
+    if ( $hr_subsume_type->{bench_subsume_type_rank} == 1 ) {
+        require Carp;
+        Carp::confess("cannot subsume with type '$hr_options->{subsume_type}'");
         return;
     }
 
-    # look for values with a values with a higher rank extrapolation type
+    # look for values with a values with a higher rank subsume type
     if (
         $h_objects{$or_self}{query}
-            ->select_check_extrapolated_values({
-                date_to                 => $hr_options->{date_to},
-                date_from               => $hr_options->{date_from},
-                extrapolation_type_id   => $hr_extrapolation_type->{bench_extrapolation_type_id},
+            ->select_check_subsumed_values({
+                date_to           => $hr_options->{date_to},
+                date_from         => $hr_options->{date_from},
+                subsume_type_id   => $hr_subsume_type->{bench_subsume_type_id},
             })
             ->rows()
     ) {
         require Carp;
         Carp::confess(
-            "cannot use extrapolate type '$hr_options->{extrapolation_type}' " .
-            'because a higher rank extrapolation type is already used for this date period'
+            "cannot use subsume type '$hr_options->{subsume_type}' " .
+            'because a higher rank subsume type is already used for this date period'
         );
         return;
     }
@@ -459,11 +463,11 @@ sub extrapolate {
     }
 
     # get all data points for extrapolation
-    my $or_data_values = $h_objects{$or_self}{query}->select_data_values_for_extrapolation({
-        date_to                 => $hr_options->{date_to},
-        date_from               => $hr_options->{date_from},
-        exclude_additionals     => \@a_excluded_adds,
-        extrapolation_type_id   => $hr_extrapolation_type->{bench_extrapolation_type_id},
+    my $or_data_values = $h_objects{$or_self}{query}->select_data_values_for_subsume({
+        date_to             => $hr_options->{date_to},
+        date_from           => $hr_options->{date_from},
+        exclude_additionals => \@a_excluded_adds,
+        subsume_type_id     => $hr_subsume_type->{bench_subsume_type_id},
     });
 
     require DateTime::Format::Strptime;
@@ -479,18 +483,18 @@ sub extrapolate {
 
         my $s_act_key = join '__',
             $hr_values->{bench_id},
-            $or_strp->parse_datetime( $hr_values->{created_at} )->strftime( $hr_extrapolation_type->{datetime_strftime_pattern} ),
+            $or_strp->parse_datetime( $hr_values->{created_at} )->strftime( $hr_subsume_type->{datetime_strftime_pattern} ),
             $hr_values->{additionals} || q##,
         ;
 
         if ( $s_last_key ne $s_act_key ) {
 
             if ( $i_counter ) {
-                $or_self->$fn_add_extrapolated_point({
+                $or_self->$fn_add_subsumed_point({
                     rows    => \@a_rows,
                     value   => $i_sum_value / $i_counter,
                     backup  => $b_backup,
-                    type_id => $hr_extrapolation_type->{bench_extrapolation_type_id}
+                    type_id => $hr_subsume_type->{bench_subsume_type_id}
                 });
             }
 
@@ -509,11 +513,11 @@ sub extrapolate {
     }
 
     if ( $i_counter ) {
-        $or_self->$fn_add_extrapolated_point({
+        $or_self->$fn_add_subsumed_point({
             rows    => \@a_rows,
             value   => $i_sum_value / $i_counter,
             backup  => $b_backup,
-            type_id => $hr_extrapolation_type->{bench_extrapolation_type_id}
+            type_id => $hr_subsume_type->{bench_subsume_type_id}
         });
     }
 
@@ -594,7 +598,7 @@ Tapper::Benchmark - Save and search benchmark points by database
         ],
         order_by    => [
             'machine',
-            ['ASC','testrun_id']
+            ['ASC','testrun_id',{ numeric => 1 }]
         ],
         limit       => 2,
         offset      => 1,
@@ -604,8 +608,8 @@ Tapper::Benchmark - Save and search benchmark points by database
         ...
     }
 
-    my $b_success = $or_bench->extrapolate({
-        extrapolation_type  => 'month',
+    my $b_success = $or_bench->subsume({
+        subsume_type        => 'month',
         exclude_additionals => [qw/ benchmark_date /],
         date_from           => '2013-01-01 00:00:00',
         date_to             => '2014-01-01 00:00:00',
@@ -872,16 +876,23 @@ values is possible. In SQL it is implemented with IN and NOT IN.
 
 =item order_by [optional]
 
-An Array of Strings of Array References. Determine the order of returned
-benchmark data points. The first element of the Sub-Array is the order
-direction. Possible values for or direction are "ASC" ( ascending ) and "DESC"
-(descending). If an string instead of an Array Reference is given, the default
-order direction is "ASC".
+An Array of Strings of an Array of Array References determining the order of
+returned benchmark data points.
+
+Array of Strings:
+    column to sort with default order direction "ASC" (ascending)
+
+Array of Array References
+    1. Element: column to sort
+    2. Element: order direction with possible values "ASC" (ascending) and "DESC" (descending)
+    3. Element: hash of additional options. Possible values:
+        numeric: Set a true value for a numeric sort
 
     ...
         order_by    => [
             'machine',
-            ['ASC','testrun_id']
+            ['benchmark_date','DESC']
+            ['testrun_id','ASC',{numeric => 1}]
         ],
     ...
 
@@ -955,7 +966,7 @@ Every "key" create a new nested hash.
         ],
     });
 
-=head3 extrapolate
+=head3 subsume
 
 =over
 
@@ -968,8 +979,8 @@ columns. By default all old grouped columns will be added to backup tables for
 rebuilding the original state.
 It is highly recommended to do this periodically for better search performance.
 
-    my $b_success = $or_bench->extrapolate({
-        extrapolation_type  => 'month',
+    my $b_success = $or_bench->subsume({
+        subsume_type        => 'month',
         exclude_additionals => [qw/ benchmark_date /],
         date_from           => '2013-01-01 00:00:00',
         date_to             => '2014-01-01 00:00:00',
@@ -978,26 +989,26 @@ It is highly recommended to do this periodically for better search performance.
 
 =over
 
-=item extrapolation_type
+=item subsume_type
 
-The extrapolation of benchmark data points is made by group with the following
+The subsume of benchmark data points is made by group with the following
 elements:
 
  - bench_id
  - additional data values ( Example: testrun_id, machine )
- - specific data range ( extrapolation_type ).
-   The possible extrapolation types are stored in the
+ - specific data range ( subsume_type ).
+   The possible subsume types are stored in the
    extrapolation_type_table ( Tapper::Benchmark-Configuration ). By default there
    are the following types: "second", "minute", "hour", "day", "week", "month",
    "year".
 
 =item date_from
 
-Begin of extrapolation period.
+Begin of subsume period.
 
 =item date_to
 
-End of extrapolation period.
+End of subsume period.
 
 =item exclude_additionals
 
@@ -1005,7 +1016,7 @@ Array Reference of additional values that should be excluded from grouping.
 
 =item backup
 
-By default all extrapolated rows will be inserted to backup tables. If this
+By default all subsumed rows will be inserted to backup tables. If this
 isn't desired a false value must be passed.
 
 =back
@@ -1029,16 +1040,16 @@ other column is found.
 
 Containing the names of the tables used bei B<Tapper::Benchmark>
 
-    tables {
+    tables => {
         unit_table                       => 'bench_units',
         benchmark_table                  => 'benchs',
         benchmark_value_table            => 'bench_values',
         benchmark_backup_value_table     => 'bench_backup_values',
+        subsume_type_table               => 'bench_subsume_types',
         additional_type_table            => 'bench_additional_types',
         additional_value_table           => 'bench_additional_values',
         additional_relation_table        => 'bench_additional_relations',
         additional_type_relation_table   => 'bench_additional_type_relations',
-        extrapolation_type_table         => 'bench_extrapolation_types',
         backup_additional_relation_table => 'bench_backup_additional_relations',
     }
 

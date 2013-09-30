@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use lib '~/git/TapperModel/lib';
+use lib '~/git/Tapper-Model/lib';
 use lib '~/git/Tapper-Benchmark/lib';
 
 BEGIN {
@@ -113,7 +113,8 @@ require Data::Dumper;
 #        ],
 #        limit       => 2,
 #        order_by     => [
-#            'bench_date',
+#            'machine',
+#            [ 'testrun_id', 'DESC', { numeric => 1 } ],
 #        ],
 #    })
 #);
@@ -180,8 +181,8 @@ require Data::Dumper;
 #    })
 #);
 
-#$or_bench->extrapolate({
-#    extrapolation_type  => 'month',
+#$or_bench->subsume({
+#    subsume_type        => 'month',
 #    exclude_additionals => [qw/ benchmark_date /],
 #    date_from           => '2013-01-01 00:00:00',
 #    date_to             => '2014-01-01 00:00:00',
