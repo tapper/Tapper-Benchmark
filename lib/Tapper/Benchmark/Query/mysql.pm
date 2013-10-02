@@ -348,7 +348,7 @@ sub select_benchmark_values {
             FROM
                 $or_self->{config}{tables}{benchmark_table} b
                 JOIN $or_self->{config}{tables}{benchmark_value_table} bv
-                    ON ( bv.bench_id = bv.bench_id )
+                    ON ( bv.bench_id = b.bench_id )
                 LEFT JOIN $or_self->{config}{tables}{unit_table} bu
                     ON ( bu.bench_unit_id = b.bench_unit_id )
                 " . ( join "\n", @a_from ) . "
