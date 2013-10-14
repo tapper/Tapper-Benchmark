@@ -3,29 +3,29 @@ package Tapper::Benchmark;
 use strict;
 use warnings;
 
-my ( %h_objects, %h_db_cache );
+my ( %h_db_cache );
 
 my $fn_add_subsumed_point = sub {
 
     my ( $or_self, $hr_atts ) = @_;
 
-    $h_objects{$or_self}{query}->start_transaction();
+    $or_self->{query}->start_transaction();
 
     eval {
 
         # insert subsumed benchmark value
-        $h_objects{$or_self}{query}->insert_benchmark_value(
+        $or_self->{query}->insert_benchmark_value(
             $hr_atts->{rows}[0]{bench_id},
             $hr_atts->{type_id},
             $hr_atts->{value},
         );
-        my $i_bench_value_id = $h_objects{$or_self}{query}->last_insert_id(
-            $h_objects{$or_self}{config}{tables}{benchmark_value_table},
+        my $i_bench_value_id = $or_self->{query}->last_insert_id(
+            $or_self->{config}{tables}{benchmark_value_table},
             'bench_value_id',
         );
 
         # insert subsumed benchmark additional values
-        $h_objects{$or_self}{query}->copy_additional_values({
+        $or_self->{query}->copy_additional_values({
             new_bench_value_id => $i_bench_value_id,
             old_bench_value_id => $hr_atts->{rows}[0]{bench_value_id},
         });
@@ -35,15 +35,15 @@ my $fn_add_subsumed_point = sub {
             if ( $hr_backup_row->{bench_subsume_type_rank} == 1 ) {
                 if ( $hr_atts->{backup} ) {
                     # copy data rows to backup table
-                    $h_objects{$or_self}{query}->copy_benchmark_backup_value({
+                    $or_self->{query}->copy_benchmark_backup_value({
                         new_bench_value_id => $i_bench_value_id,
                         old_bench_value_id => $hr_backup_row->{bench_value_id},
                     });
-                    my $i_bench_backup_value_id = $h_objects{$or_self}{query}->last_insert_id(
-                        $h_objects{$or_self}{config}{tables}{benchmark_backup_value_table},
+                    my $i_bench_backup_value_id = $or_self->{query}->last_insert_id(
+                        $or_self->{config}{tables}{benchmark_backup_value_table},
                         'bench_backup_value_id',
                     );
-                    $h_objects{$or_self}{query}->copy_benchmark_backup_additional_relations({
+                    $or_self->{query}->copy_benchmark_backup_additional_relations({
                         new_bench_value_id => $i_bench_backup_value_id,
                         old_bench_value_id => $hr_backup_row->{bench_value_id},
                     });
@@ -51,17 +51,17 @@ my $fn_add_subsumed_point = sub {
             }
             else {
                 # update bench_value_id in backup table
-                $h_objects{$or_self}{query}->update_benchmark_backup_value({
+                $or_self->{query}->update_benchmark_backup_value({
                     new_bench_value_id => $i_bench_value_id,
                     old_bench_value_id => $hr_backup_row->{bench_value_id},
                 });
             }
 
             # now lets remove the old rows
-            $h_objects{$or_self}{query}->delete_benchmark_additional_relations(
+            $or_self->{query}->delete_benchmark_additional_relations(
                 $hr_backup_row->{bench_value_id},
             );
-            $h_objects{$or_self}{query}->delete_benchmark_value(
+            $or_self->{query}->delete_benchmark_value(
                 $hr_backup_row->{bench_value_id},
             );
 
@@ -69,7 +69,7 @@ my $fn_add_subsumed_point = sub {
 
     };
 
-    $h_objects{$or_self}{query}->finish_transaction( $@ );
+    $or_self->{query}->finish_transaction( $@ );
 
     return 1;
 
@@ -89,8 +89,7 @@ sub new {
         }
     }
 
-    $h_objects{$or_self}         = {};
-    $h_objects{$or_self}{config} = $hr_atts->{config};
+    $or_self->{config} = $hr_atts->{config};
 
     my $s_module = "Tapper::Benchmark::Query::$hr_atts->{dbh}{Driver}{Name}";
 
@@ -107,7 +106,7 @@ sub new {
         return;
     }
     else {
-        $h_objects{$or_self}{query} = $s_module->new({
+        $or_self->{query} = $s_module->new({
             dbh    => $hr_atts->{dbh},
             debug  => $hr_atts->{debug},
             config => $hr_atts->{config},
@@ -122,13 +121,13 @@ sub add_single_benchmark {
 
     my ( $or_self, $hr_benchmark, $hr_options ) = @_;
 
-    my $hr_config = $h_objects{$or_self}{config};
+    my $hr_config = $or_self->{config};
 
     # benchmark
     my $i_benchmark_id;
     if ( $hr_benchmark->{name} ) {
         if (
-            my $hr_bench_select = $h_objects{$or_self}{query}
+            my $hr_bench_select = $or_self->{query}
                 ->select_benchmark( $hr_benchmark->{name} )
                 ->fetchrow_hashref()
         ) {
@@ -138,26 +137,26 @@ sub add_single_benchmark {
             my $i_unit_id;
             if ( $hr_benchmark->{unit} ) {
                 if (
-                    my $hr_unit_select = $h_objects{$or_self}{query}
+                    my $hr_unit_select = $or_self->{query}
                         ->select_unit( $hr_benchmark->{unit} )
                         ->fetchrow_hashref()
                 ) {
                     $i_unit_id = $hr_unit_select->{bench_unit_id};
                 }
                 else {
-                    $h_objects{$or_self}{query}->insert_unit(
+                    $or_self->{query}->insert_unit(
                         $hr_benchmark->{unit},
                     );
-                    $i_unit_id = $h_objects{$or_self}{query}->last_insert_id(
+                    $i_unit_id = $or_self->{query}->last_insert_id(
                         $hr_config->{tables}{unit_table},
                         'bench_unit_id',
                     );
                 }
             }
-            $h_objects{$or_self}{query}->insert_benchmark(
+            $or_self->{query}->insert_benchmark(
                 $hr_benchmark->{name}, $i_unit_id,
             );
-            $i_benchmark_id = $h_objects{$or_self}{query}->last_insert_id(
+            $i_benchmark_id = $or_self->{query}->last_insert_id(
                 $hr_config->{tables}{benchmark_table},
                 'bench_id',
             );
@@ -175,7 +174,7 @@ sub add_single_benchmark {
         && @{$hr_benchmark->{data}}
     ) {
 
-        my $i_benchmark_subsume_type_id = $h_objects{$or_self}{query}
+        my $i_benchmark_subsume_type_id = $or_self->{query}
             ->select_min_subsume_type()
             ->fetchrow_hashref()
             ->{bench_subsume_type_id}
@@ -184,7 +183,7 @@ sub add_single_benchmark {
         my $i_counter = 1;
         for my $hr_point ( @{$hr_benchmark->{data}} ) {
 
-            if (! $hr_point->{value} ) {
+            if ( not exists $hr_point->{value} ) {
                 require Carp;
                 if ( $hr_options->{force} ) {
                     Carp::cluck("missing parameter 'value' in element $i_counter");
@@ -195,10 +194,10 @@ sub add_single_benchmark {
             }
 
             # benchmark value
-            $h_objects{$or_self}{query}->insert_benchmark_value(
+            $or_self->{query}->insert_benchmark_value(
                 $i_benchmark_id, $i_benchmark_subsume_type_id, $hr_point->{value},
             );
-            my $i_benchmark_value_id = $h_objects{$or_self}{query}->last_insert_id(
+            my $i_benchmark_value_id = $or_self->{query}->last_insert_id(
                 $hr_config->{tables}{benchmark_value_table},
                 'bench_value_id',
             );
@@ -214,17 +213,17 @@ sub add_single_benchmark {
                 }
                 else {
                     if (
-                        my $hr_addtype_select = $h_objects{$or_self}{query}
+                        my $hr_addtype_select = $or_self->{query}
                             ->select_addtype( $s_key )
                             ->fetchrow_hashref()
                     ) {
                         $i_addtype_id = $hr_addtype_select->{bench_additional_type_id};
                     }
                     else {
-                        $h_objects{$or_self}{query}->insert_addtype(
+                        $or_self->{query}->insert_addtype(
                             $s_key,
                         );
-                        $i_addtype_id = $h_objects{$or_self}{query}->last_insert_id(
+                        $i_addtype_id = $or_self->{query}->last_insert_id(
                             $hr_config->{tables}{addition_type_table},
                             'bench_additional_type_id',
                         );
@@ -238,12 +237,12 @@ sub add_single_benchmark {
                 my $s_addtyperel = "$i_benchmark_id|$i_addtype_id";
                 if (! $h_db_cache{addtyperel}{$s_addtyperel} ) {
                     if(!
-                        $h_objects{$or_self}{query}
+                        $or_self->{query}
                             ->select_addtyperelation( $i_benchmark_id, $i_addtype_id )
                             ->fetchrow_hashref()
                     ) {
                         $h_db_cache{addtyperel}{$s_addtyperel} = 1;
-                        $h_objects{$or_self}{query}
+                        $or_self->{query}
                             ->insert_addtyperelation( $i_benchmark_id, $i_addtype_id )
                         ;
                     }
@@ -257,17 +256,17 @@ sub add_single_benchmark {
                 }
                 else {
                     if (
-                        my $hr_addvalue_select = $h_objects{$or_self}{query}
+                        my $hr_addvalue_select = $or_self->{query}
                             ->select_addvalue( $i_addtype_id, $hr_point->{$s_key} )
                             ->fetchrow_hashref()
                     ) {
                         $i_addvalue_id = $hr_addvalue_select->{bench_additional_value_id};
                     }
                     else {
-                        $h_objects{$or_self}{query}->insert_addvalue(
+                        $or_self->{query}->insert_addvalue(
                             $i_addtype_id, $hr_point->{$s_key},
                         );
-                        $i_addvalue_id = $h_objects{$or_self}{query}->last_insert_id(
+                        $i_addvalue_id = $or_self->{query}->last_insert_id(
                             $hr_config->{tables}{addition_type_table},
                             'bench_additional_value_id',
                         );
@@ -278,7 +277,7 @@ sub add_single_benchmark {
                 }
 
                 # additional value relation
-                $h_objects{$or_self}{query}->insert_addvaluerelation(
+                $or_self->{query}->insert_addvaluerelation(
                     $i_benchmark_value_id, $i_addvalue_id,
                 );
 
@@ -307,7 +306,7 @@ sub add_multi_benchmark {
     for my $hr_data_point ( @{$ar_data_points} ) {
 
         for my $s_param (qw/ name value /) {
-            if (! $hr_data_point->{$s_param} ) {
+            if ( not exists $hr_data_point->{$s_param} ) {
                 require Carp;
                 if ( $hr_options->{force} ) {
                     Carp::cluck("missing parameter '$s_param' in element $i_counter");
@@ -357,7 +356,7 @@ sub search {
         }
     }
 
-    my $hr_search_data = $h_objects{$or_self}{query}->select_benchmark_values(
+    my $hr_search_data = $or_self->{query}->select_benchmark_values(
         $hr_search
     );
 
@@ -410,7 +409,7 @@ sub subsume {
     }
 
     # check if subsume type exists
-    my $hr_subsume_type = $h_objects{$or_self}{query}
+    my $hr_subsume_type = $or_self->{query}
         ->select_subsume_type( $hr_options->{subsume_type} )
         ->fetchrow_hashref()
     ;
@@ -427,7 +426,7 @@ sub subsume {
 
     # look for values with a values with a higher rank subsume type
     if (
-        $h_objects{$or_self}{query}
+        $or_self->{query}
             ->select_check_subsumed_values({
                 date_to           => $hr_options->{date_to},
                 date_from         => $hr_options->{date_from},
@@ -448,7 +447,7 @@ sub subsume {
     if ( $hr_options->{exclude_additionals} ) {
         for my $s_additional_type ( @{$hr_options->{exclude_additionals}} ) {
             if (
-                my $hr_addtype = $h_objects{$or_self}{query}
+                my $hr_addtype = $or_self->{query}
                     ->select_addtype( $s_additional_type )
                     ->fetchrow_hashref()
             ) {
@@ -463,7 +462,7 @@ sub subsume {
     }
 
     # get all data points for extrapolation
-    my $or_data_values = $h_objects{$or_self}{query}->select_data_values_for_subsume({
+    my $or_data_values = $or_self->{query}->select_data_values_for_subsume({
         date_to             => $hr_options->{date_to},
         date_from           => $hr_options->{date_from},
         exclude_additionals => \@a_excluded_adds,

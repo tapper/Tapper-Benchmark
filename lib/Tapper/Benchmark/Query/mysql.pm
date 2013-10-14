@@ -13,6 +13,16 @@ my %h_default_columns = (
     'bench_date'     => 'bv.created_at',
 );
 
+sub default_columns {
+    return %h_default_columns;
+}
+
+sub benchmark_operators {
+
+    return ( '=', '!=', 'like', 'not like', '<', '>', '<=', '>=' );
+
+}
+
 sub create_where_clause {
 
     my ( $s_column_name, $ar_value ) = @_;
