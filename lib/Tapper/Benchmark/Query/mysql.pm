@@ -5,6 +5,7 @@ use warnings;
 use feature 'switch';
 use base 'Tapper::Benchmark::Query';
 
+my %h_used_selects;
 my %h_default_columns = (
     'bench'          => 'b.bench',
     'bench_unit'     => 'bu.bench_unit',
@@ -98,17 +99,25 @@ sub create_select_column {
         }
     } # AGGR
 
-    if ( $s_column ~~ %h_default_columns ) {
-        if ( $s_aggr ) {
+    if ( $s_aggr ) {
+        if ( $h_used_selects{$or_self}{$s_aggr . "_$s_column"} ) {
+            return;
+        }
+        $h_used_selects{$or_self}{$s_aggr . "_$s_column"} = 1;
+        if ( $s_column ~~ %h_default_columns ) {
             return ( '', "$s_aggr_func $h_default_columns{$s_column} ) AS " . $s_aggr . "_$s_column" );
         }
         else {
-            return ( '', "$h_default_columns{$s_column} AS $s_column" );
+            return ( $s_column, "$s_aggr_func bav$i_counter.bench_additional_value ) AS " . $s_aggr . "_$s_column" );
         }
     }
     else {
-        if ( $s_aggr ) {
-            return ( $s_column, "$s_aggr_func bav$i_counter.bench_additional_value ) AS " . $s_aggr . "_$s_column" );
+        if ( $h_used_selects{$or_self}{$s_column} ) {
+            return;
+        }
+        $h_used_selects{$or_self}{$s_column} = 1;
+        if ( $s_column ~~ %h_default_columns ) {
+            return ( '', "$h_default_columns{$s_column} AS $s_column" );
         }
         else {
             return ( $s_column, "bav$i_counter.bench_additional_value AS $s_column" );
@@ -156,6 +165,9 @@ sub create_period_check {
 sub select_benchmark_values {
 
     my ( $or_self, $hr_search ) = @_;
+
+    # clear selected columns
+    $h_used_selects{$or_self} = {};
 
     # deep copy hash
     require JSON::XS;
@@ -266,33 +278,36 @@ sub select_benchmark_values {
             $ar_select, $i_counter, $b_aggregate_all,
         );
 
-        push @a_select, $s_select;
+        if ( $s_select ) {
 
-        if ( $s_column ) {
+            push @a_select, $s_select;
 
-            my $hr_additional_type = $or_self
-                ->select_addtype_by_name( $s_column )
-                ->fetchrow_hashref()
-            ;
-            if ( !$hr_additional_type || !$hr_additional_type->{bench_additional_type_id} ) {
-                require Carp;
-                Carp::confess("benchmark additional value '$s_column' not exists");
-                return;
-            }
+            if ( $s_column ) {
 
-            push @a_from_vals, $hr_additional_type->{bench_additional_type_id};
-            push @a_from, "
-                LEFT JOIN (
-                    $or_self->{config}{tables}{additional_relation_table} bar$i_counter
-                    JOIN $or_self->{config}{tables}{additional_value_table} bav$i_counter
-                        ON ( bav$i_counter.bench_additional_value_id = bar$i_counter.bench_additional_value_id )
-                )
-                    ON (
-                        bar$i_counter.bench_value_id = bv.bench_value_id
-                        AND bav$i_counter.bench_additional_type_id = ?
+                my $hr_additional_type = $or_self
+                    ->select_addtype_by_name( $s_column )
+                    ->fetchrow_hashref()
+                ;
+                if ( !$hr_additional_type || !$hr_additional_type->{bench_additional_type_id} ) {
+                    require Carp;
+                    Carp::confess("benchmark additional value '$s_column' not exists");
+                    return;
+                }
+
+                push @a_from_vals, $hr_additional_type->{bench_additional_type_id};
+                push @a_from, "
+                    LEFT JOIN (
+                        $or_self->{config}{tables}{additional_relation_table} bar$i_counter
+                        JOIN $or_self->{config}{tables}{additional_value_table} bav$i_counter
+                            ON ( bav$i_counter.bench_additional_value_id = bar$i_counter.bench_additional_value_id )
                     )
-            ";
-            $i_counter++;
+                        ON (
+                            bar$i_counter.bench_value_id = bv.bench_value_id
+                            AND bav$i_counter.bench_additional_type_id = ?
+                        )
+                ";
+                $i_counter++;
+            }
         }
 
     }
