@@ -3,8 +3,6 @@ package Tapper::Benchmark;
 use strict;
 use warnings;
 
-my ( %h_db_cache );
-
 my $fn_add_subsumed_point = sub {
 
     my ( $or_self, $hr_atts ) = @_;
@@ -90,6 +88,11 @@ sub new {
     }
 
     $or_self->{config} = $hr_atts->{config};
+
+    require CHI;
+    if ( $or_self->{config}{select_cache} ) {
+        $or_self->{cache} = CHI->new( driver => 'RawMemory' );
+    }
 
     my $s_module = "Tapper::Benchmark::Query::$hr_atts->{dbh}{Driver}{Name}";
 
@@ -202,16 +205,16 @@ sub add_single_benchmark {
                 'bench_value_id',
             );
 
-            ADDITIONALS: for my $s_key ( keys %{$hr_point} ) {
+            ADDITIONAL: for my $s_key ( keys %{$hr_point} ) {
 
-                next ADDITIONALS if $s_key eq 'value';
+                next ADDITIONAL if $s_key eq 'value';
 
                 # additional type
                 my $i_addtype_id;
-                if ( $hr_config->{select_cache} && $h_db_cache{addtype}{$s_key} ) {
-                    $i_addtype_id = $h_db_cache{addtype}{$s_key};
+                if ( $or_self->{cache} ) {
+                    $i_addtype_id = $or_self->{cache}->get("addtype||$s_key");
                 }
-                else {
+                if ( !$i_addtype_id ) {
                     if (
                         my $hr_addtype_select = $or_self->{query}
                             ->select_addtype( $s_key )
@@ -228,33 +231,41 @@ sub add_single_benchmark {
                             'bench_additional_type_id',
                         );
                     }
-                    if ( $hr_config->{select_cache} ) {
-                        $h_db_cache{addtype}{$s_key} = $i_addtype_id;
+                    if ( $or_self->{cache} ) {
+                        $or_self->{cache}->set( "addtype||$s_key" => $i_addtype_id );
                     }
                 }
 
                 # benchmark - additional type - relation
+                my $b_inserted   = 0;
                 my $s_addtyperel = "$i_benchmark_id|$i_addtype_id";
-                if (! $h_db_cache{addtyperel}{$s_addtyperel} ) {
+                if ( $or_self->{cache} ) {
+                    if ( $or_self->{cache}->get("addtyperel||$s_addtyperel") ) {
+                        $b_inserted = 1;
+                    }
+                }
+                if (! $b_inserted ) {
                     if(!
                         $or_self->{query}
                             ->select_addtyperelation( $i_benchmark_id, $i_addtype_id )
                             ->fetchrow_hashref()
                     ) {
-                        $h_db_cache{addtyperel}{$s_addtyperel} = 1;
                         $or_self->{query}
                             ->insert_addtyperelation( $i_benchmark_id, $i_addtype_id )
                         ;
+                    }
+                    if ( $or_self->{cache} ) {
+                        $or_self->{cache}->set("addtyperel||$s_addtyperel" => 1 );
                     }
                 }
 
                 # additional value
                 my $i_addvalue_id;
                 my $s_addvalue_key = "$i_addtype_id|$hr_point->{$s_key}";
-                if ( $hr_config->{select_cache} && $h_db_cache{addvalue}{$s_addvalue_key} ) {
-                    $i_addvalue_id = $h_db_cache{addvalue}{$s_addvalue_key};
+                if ( $or_self->{cache} ) {
+                    $i_addvalue_id = $or_self->{cache}->get("addvalue||$s_addvalue_key");
                 }
-                else {
+                if (! $i_addvalue_id ) {
                     if (
                         my $hr_addvalue_select = $or_self->{query}
                             ->select_addvalue( $i_addtype_id, $hr_point->{$s_key} )
@@ -271,8 +282,8 @@ sub add_single_benchmark {
                             'bench_additional_value_id',
                         );
                     }
-                    if ( $hr_config->{select_cache} ) {
-                        $h_db_cache{addvalue}{$s_addvalue_key} = $i_addvalue_id;
+                    if ( $or_self->{cache} ) {
+                        $or_self->{cache}->set( "addvalue||$s_addvalue_key" => $i_addvalue_id );
                     }
                 }
 
@@ -281,7 +292,7 @@ sub add_single_benchmark {
                     $i_benchmark_value_id, $i_addvalue_id,
                 );
 
-            } # ADDITIONALS
+            } # ADDITIONAL
 
             $i_counter++;
 
@@ -348,11 +359,11 @@ sub search {
     my ( $or_self, $hr_search ) = @_;
 
     my $s_key;
-    if ( $or_self->{config}{select_cache} ) {
+    if ( $or_self->{cache} ) {
         require JSON::XS;
         $s_key = JSON::XS::encode_json($hr_search);
-        if ( $h_db_cache{search}{$s_key} ) {
-            return $h_db_cache{search}{$s_key};
+        if ( my $hr_search_data = $or_self->{cache}->get("search||$s_key") ) {
+            return $hr_search_data;
         }
     }
 
@@ -361,7 +372,7 @@ sub search {
     );
 
     if ( $s_key ) {
-        $h_db_cache{search}{$s_key} = $hr_search_data;
+        $or_self->{cache}->set( "search||$s_key" => $hr_search_data );
     }
 
     return $hr_search_data;
@@ -424,7 +435,7 @@ sub subsume {
         return;
     }
 
-    # look for values with a values with a higher rank subsume type
+    # looking for values with with a higher rank subsume type
     if (
         $or_self->{query}
             ->select_check_subsumed_values({
@@ -461,7 +472,7 @@ sub subsume {
         }
     }
 
-    # get all data points for extrapolation
+    # get all data points for subsume
     my $or_data_values = $or_self->{query}->select_data_values_for_subsume({
         date_to             => $hr_options->{date_to},
         date_from           => $hr_options->{date_from},
@@ -617,8 +628,7 @@ Tapper::Benchmark - Save and search benchmark points by database
 =head1 DESCRIPTION
 
 B<Tapper::Benchmark> is a module for adding benchmark points in a standardised
-way to the the database. A search function with complexe filters is already
-exists.
+way to the the database. A search function with complexe filters already exists.
 
 =head2 Class Methods
 
@@ -833,7 +843,7 @@ Tapper::Benchmark-Configuration. Possible aggregation types are:
         ],
     ...
 
-A agrregation is also possible for the default columns.
+A aggregation is also possible for the default columns.
 
     ...
         select      => [

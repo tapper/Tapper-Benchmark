@@ -5,6 +5,8 @@ use warnings;
 use feature 'switch';
 use base 'Tapper::Benchmark::Query';
 
+use List::MoreUtils qw( any );
+
 my %h_used_selects;
 my %h_default_columns = (
     'bench'          => 'b.bench',
@@ -104,7 +106,7 @@ sub create_select_column {
             return;
         }
         $h_used_selects{$or_self}{$s_aggr . "_$s_column"} = 1;
-        if ( $s_column ~~ %h_default_columns ) {
+        if ( any { $s_column eq $_  } keys %h_default_columns ) {
             return ( '', "$s_aggr_func $h_default_columns{$s_column} ) AS " . $s_aggr . "_$s_column" );
         }
         else {
@@ -116,7 +118,7 @@ sub create_select_column {
             return;
         }
         $h_used_selects{$or_self}{$s_column} = 1;
-        if ( $s_column ~~ %h_default_columns ) {
+        if ( any { $s_column eq $_  } keys %h_default_columns ) {
             return ( '', "$h_default_columns{$s_column} AS $s_column" );
         }
         else {
@@ -218,7 +220,7 @@ sub select_benchmark_values {
     my $i_counter = 0;
     if ( $hr_search->{where} ) {
         for my $ar_where ( @{$hr_search->{where}} ) {
-            if ( $ar_where->[1] ~~ %h_default_columns ) {
+            if ( any { $ar_where->[1] eq $_  } keys %h_default_columns ) {
                 my $s_column = splice( @{$ar_where}, 1, 1 );
                 push @a_where, create_where_clause( $h_default_columns{$s_column}, $ar_where );
                 push @a_where_vals , @{$ar_where}[1..$#{$ar_where}];
@@ -322,13 +324,13 @@ sub select_benchmark_values {
         my @a_order_by;
         for my $order_column ( @{$hr_search->{order_by}} ) {
             if ( ref $order_column ) {
-                if ( $order_column->[0] ~~ @a_order_by_possible ) {
-                    if ( $order_column->[1] ~~ @a_order_by_direction ) {
+                if ( any { $order_column->[0] eq $_  } @a_order_by_possible ) {
+                    if ( any { $order_column->[1] eq $_ } @a_order_by_direction ) {
                         my $s_numeric_cast = q##;
                         if ( $order_column->[2] && $order_column->[2]{numeric} ) {
                             $s_numeric_cast = '0 + ';
                         }
-                        if ( $order_column->[0] ~~ %h_default_columns ) {
+                        if ( any { $order_column->[0] eq $_ } keys %h_default_columns ) {
                             push @a_order_by, "$s_numeric_cast$h_default_columns{$order_column->[0]} $order_column->[1]";
                         }
                         else {
@@ -348,8 +350,8 @@ sub select_benchmark_values {
                 }
             }
             else {
-                if ( $order_column ~~ @a_order_by_possible ) {
-                    if ( $order_column ~~ %h_default_columns ) {
+                if ( any { $order_column eq $_ } @a_order_by_possible ) {
+                    if ( any { $order_column eq $_ } keys %h_default_columns ) {
                         push @a_order_by, "$h_default_columns{$order_column} ASC";
                     }
                     else {
