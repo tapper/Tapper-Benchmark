@@ -91,7 +91,7 @@ sub new {
 
     require CHI;
     if ( $or_self->{config}{select_cache} ) {
-        $or_self->{cache} = CHI->new( driver => 'RawMemory' );
+        $or_self->{cache} = CHI->new( driver => 'RawMemory', global => 1 );
     }
 
     my $s_module = "Tapper::Benchmark::Query::$hr_atts->{dbh}{Driver}{Name}";
@@ -358,24 +358,9 @@ sub search {
 
     my ( $or_self, $hr_search ) = @_;
 
-    my $s_key;
-    if ( $or_self->{cache} ) {
-        require JSON::XS;
-        $s_key = JSON::XS::encode_json($hr_search);
-        if ( my $hr_search_data = $or_self->{cache}->get("search||$s_key") ) {
-            return $hr_search_data;
-        }
-    }
-
-    my $hr_search_data = $or_self->{query}->select_benchmark_values(
+    return $or_self->{query}->select_benchmark_values(
         $hr_search
     );
-
-    if ( $s_key ) {
-        $or_self->{cache}->set( "search||$s_key" => $hr_search_data );
-    }
-
-    return $hr_search_data;
 
 }
 
@@ -383,10 +368,25 @@ sub search_array {
 
     my ( $or_self, $hr_search ) = @_;
 
-    return $or_self
+    my $s_key;
+    if ( $or_self->{cache} ) {
+        require JSON::XS;
+        $s_key = JSON::XS::encode_json($hr_search);
+        if ( my $ar_search_data = $or_self->{cache}->get("search_array||$s_key") ) {
+            return $ar_search_data;
+        }
+    }
+
+    my $ar_result = $or_self
         ->search( $hr_search )
         ->fetchall_arrayref({})
     ;
+
+    if ( $or_self->{cache} ) {
+        $or_self->{cache}->set( "search_array||$s_key" => $ar_result );
+    }
+
+    return $ar_result;
 
 }
 
@@ -394,16 +394,31 @@ sub search_hash {
 
     my ( $or_self, $hr_search ) = @_;
 
+    my $s_key;
+    if ( $or_self->{cache} ) {
+        require JSON::XS;
+        $s_key = JSON::XS::encode_json($hr_search);
+        if ( my $hr_search_data = $or_self->{cache}->get( "search_hash||$s_key" ) ) {
+            return $hr_search_data;
+        }
+    }
+
     if (! $hr_search->{keys} ) {
         require Carp;
         Carp::confess(q#cannot get hash search result without 'keys'#);
         return;
     }
 
-    my $or_prep = $or_self
+    my $hr_result = $or_self
         ->search( $hr_search )
         ->fetchall_hashref($hr_search->{keys})
     ;
+
+    if ( $or_self->{cache} ) {
+        $or_self->{cache}->set( "search_hash||$s_key" => $hr_result )
+    }
+
+    return $hr_result;
 
 }
 
