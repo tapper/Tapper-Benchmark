@@ -15,7 +15,7 @@ my $fn_add_subsumed_point = sub {
         $or_self->{query}->insert_benchmark_value(
             $hr_atts->{rows}[0]{bench_id},
             $hr_atts->{type_id},
-            $hr_atts->{value},
+            $hr_atts->{VALUE},
         );
         my $i_bench_value_id = $or_self->{query}->last_insert_id(
             $or_self->{config}{tables}{benchmark_value_table},
@@ -128,27 +128,27 @@ sub add_single_benchmark {
 
     # benchmark
     my $i_benchmark_id;
-    if ( $hr_benchmark->{name} ) {
+    if ( $hr_benchmark->{NAME} ) {
         if (
             my $hr_bench_select = $or_self->{query}
-                ->select_benchmark( $hr_benchmark->{name} )
+                ->select_benchmark( $hr_benchmark->{NAME} )
                 ->fetchrow_hashref()
         ) {
             $i_benchmark_id = $hr_bench_select->{bench_id};
         }
         else {
             my $i_unit_id;
-            if ( $hr_benchmark->{unit} ) {
+            if ( $hr_benchmark->{UNIT} ) {
                 if (
                     my $hr_unit_select = $or_self->{query}
-                        ->select_unit( $hr_benchmark->{unit} )
+                        ->select_unit( $hr_benchmark->{UNIT} )
                         ->fetchrow_hashref()
                 ) {
                     $i_unit_id = $hr_unit_select->{bench_unit_id};
                 }
                 else {
                     $or_self->{query}->insert_unit(
-                        $hr_benchmark->{unit},
+                        $hr_benchmark->{UNIT},
                     );
                     $i_unit_id = $or_self->{query}->last_insert_id(
                         $hr_config->{tables}{unit_table},
@@ -157,7 +157,7 @@ sub add_single_benchmark {
                 }
             }
             $or_self->{query}->insert_benchmark(
-                $hr_benchmark->{name}, $i_unit_id,
+                $hr_benchmark->{NAME}, $i_unit_id,
             );
             $i_benchmark_id = $or_self->{query}->last_insert_id(
                 $hr_config->{tables}{benchmark_table},
@@ -167,7 +167,7 @@ sub add_single_benchmark {
     }
     else {
         require Carp;
-        Carp::confess('missing element "name"');
+        Carp::confess('missing element "NAME"');
         return 0;
     }
 
@@ -186,19 +186,19 @@ sub add_single_benchmark {
         my $i_counter = 1;
         for my $hr_point ( @{$hr_benchmark->{data}} ) {
 
-            if ( not exists $hr_point->{value} ) {
+            if ( not exists $hr_point->{VALUE} ) {
                 require Carp;
                 if ( $hr_options->{force} ) {
-                    Carp::cluck("missing parameter 'value' in element $i_counter");
+                    Carp::cluck("missing parameter 'VALUE' in element $i_counter");
                 }
                 else {
-                    Carp::confess("missing parameter 'value' in element $i_counter");
+                    Carp::confess("missing parameter 'VALUE' in element $i_counter");
                 }
             }
 
             # benchmark value
             $or_self->{query}->insert_benchmark_value(
-                $i_benchmark_id, $i_benchmark_subsume_type_id, $hr_point->{value},
+                $i_benchmark_id, $i_benchmark_subsume_type_id, $hr_point->{VALUE},
             );
             my $i_benchmark_value_id = $or_self->{query}->last_insert_id(
                 $hr_config->{tables}{benchmark_value_table},
@@ -207,7 +207,7 @@ sub add_single_benchmark {
 
             ADDITIONAL: for my $s_key ( keys %{$hr_point} ) {
 
-                next ADDITIONAL if $s_key eq 'value';
+                next ADDITIONAL if $s_key eq 'VALUE';
 
                 # additional type
                 my $i_addtype_id;
@@ -316,7 +316,7 @@ sub add_multi_benchmark {
     my %h_benchmarks = ();
     for my $hr_data_point ( @{$ar_data_points} ) {
 
-        for my $s_param (qw/ name value /) {
+        for my $s_param (qw/ NAME VALUE /) {
             if ( not exists $hr_data_point->{$s_param} ) {
                 require Carp;
                 if ( $hr_options->{force} ) {
@@ -328,17 +328,17 @@ sub add_multi_benchmark {
             }
         }
 
-        my ( $s_name, $s_unit ) = delete @{$hr_data_point}{qw/ name unit /};
+        my ( $s_name, $s_unit ) = delete @{$hr_data_point}{qw/ NAME UNIT /};
 
         if (! $h_benchmarks{$s_name} ) {
             $h_benchmarks{$s_name} = {
-                name    => $s_name,
-                unit    => $s_unit,
+                NAME    => $s_name,
+                UNIT    => $s_unit,
                 data    => [],
             };
         }
         else {
-            $h_benchmarks{$s_name}{unit} ||= $s_unit;
+            $h_benchmarks{$s_name}{UNIT} ||= $s_unit;
         }
 
         push @{$h_benchmarks{$s_name}{data}}, $hr_data_point;
@@ -517,7 +517,7 @@ sub subsume {
             if ( $i_counter ) {
                 $or_self->$fn_add_subsumed_point({
                     rows    => \@a_rows,
-                    value   => $i_sum_value / $i_counter,
+                    VALUE   => $i_sum_value / $i_counter,
                     backup  => $b_backup,
                     type_id => $hr_subsume_type->{bench_subsume_type_id}
                 });
@@ -540,7 +540,7 @@ sub subsume {
     if ( $i_counter ) {
         $or_self->$fn_add_subsumed_point({
             rows    => \@a_rows,
-            value   => $i_sum_value / $i_counter,
+            VALUE   => $i_sum_value / $i_counter,
             backup  => $b_backup,
             type_id => $hr_subsume_type->{bench_subsume_type_id}
         });
@@ -571,16 +571,16 @@ Tapper::Benchmark - Save and search benchmark points by database
     });
 
     my $b_success = $or_bench->add_single_benchmark({
-        name => 'testbenchmark',
-        unit => 'example unit',
+        NAME => 'testbenchmark',
+        UNIT => 'example unit',
         data => [
             {
-                value          => 123.45,
+                VALUE          => 123.45,
                 testrun_id     => 123,
                 machine        => 'mx1.small',
                 benchmark_date => '2013-09-25 12:12:00',
             },{
-                value          => 122.88,
+                VALUE          => 122.88,
                 testrun_id     => 123,
                 machine        => 'mx1.large',
                 benchmark_date => '2013-09-23 13:02:14',
@@ -593,16 +593,16 @@ Tapper::Benchmark - Save and search benchmark points by database
 
     my $b_success = $or_bench->add_multi_benchmark([
         {
-            name           => 'testbenchmark',
-            unit           => 'example unit',
-            value          => 123.45,
+            NAME           => 'testbenchmark',
+            UNIT           => 'example unit',
+            VALUE          => 123.45,
             testrun_id     => 123,
             machine        => 'mx1.small',
             benchmark_date => '2013-09-25 12:12:00',
         },{
-            name           => 'testbenchmark',
-            unit           => 'example unit',
-            value          => 122.88,
+            NAME           => 'testbenchmark',
+            UNIT           => 'example unit',
+            VALUE          => 122.88,
             testrun_id     => 123,
             machine        => 'mx1.large',
             benchmark_date => '2013-09-23 13:02:14',
@@ -688,18 +688,18 @@ written to STDOUT. The default is 0.
 Add one or more data points to a single benchmark to the database.
 
     my $b_success = $or_bench->add_single_benchmark({
-        name => 'testbenchmark',
-        unit => 'example unit',
+        NAME => 'testbenchmark',
+        UNIT => 'example unit',
         data => [
             {
-                value          => 123.45,
+                VALUE          => 123.45,
             },{
-                value          => 122.88,
+                VALUE          => 122.88,
                 testrun_id     => 123,
                 machine        => 'mx1.large',
                 benchmark_date => '2013-09-23 13:02:14',
             },{
-                value          => 122.88,
+                VALUE          => 122.88,
                 testrun_id     => 123,
             },
             ...
@@ -710,17 +710,17 @@ Add one or more data points to a single benchmark to the database.
 
 =over
 
-=item 1. Parameter Hash => name
+=item 1. Parameter Hash => NAME
 
 The name of the benchmark for grouping benchmark data points.
 
 =item 1. Parameter Hash => data
 
 This parameter contains the benchmark data points. It's an array of hashes. The
-element C<value> is the only required element in this hashes. The C<value> is
+element C<VALUE> is the only required element in this hashes. The C<VALUE> is
 the benchmark data point value.
 
-=item 1. Parameter Hash => unit [optional]
+=item 1. Parameter Hash => UNIT [optional]
 
 Containing a unit for benchmark data point values.
 
@@ -740,19 +740,19 @@ Add one or more data points for multiple benchmarks to the database.
 
     my $b_success = $or_bench->add_multi_benchmark([
         {
-            name           => 'testbenchmark 1',
-            unit           => undef,
-            value          => 123.45,
+            NAME           => 'testbenchmark 1',
+            UNIT           => undef,
+            VALUE          => 123.45,
         },{
-            name           => 'testbenchmark 2',
-            value          => 122.88,
+            NAME           => 'testbenchmark 2',
+            VALUE          => 122.88,
             testrun_id     => 123,
             machine        => 'mx1.large',
             benchmark_date => '2013-09-23 13:02:14',
         },{
-            name           => 'testbenchmark 1',
-            unit           => 'example unit',
-            value          => 122.88,
+            NAME           => 'testbenchmark 1',
+            UNIT           => 'example unit',
+            VALUE          => 122.88,
             testrun_id     => 123,
         },
         ...
@@ -762,15 +762,15 @@ Add one or more data points for multiple benchmarks to the database.
 
 =over
 
-=item 1. Parameter Array of Hashes => name
+=item 1. Parameter Array of Hashes => NAME
 
 The name of the benchmark for grouping benchmark data points.
 
-=item 1. Parameter Hash => data
+=item 1. Parameter Hash => VALUE
 
 The value is the benchmark data point value.
 
-=item 1. Parameter Hash => unit [optional]
+=item 1. Parameter Hash => UNIT [optional]
 
 Containing a unit for benchmark data point values.
 
