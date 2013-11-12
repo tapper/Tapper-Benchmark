@@ -847,6 +847,7 @@ Tapper::Benchmark-Configuration. Possible aggregation types are:
     - min = minimum
     - max = maximum
     - avg = average
+    - gem = geometric mean
     - sum = summary
     - cnt = count
     - cnd = distinct value count

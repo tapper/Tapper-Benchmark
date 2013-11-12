@@ -77,6 +77,7 @@ sub create_select_column {
 
     my $s_aggr_func           = q##;
     my ( $s_aggr, $s_column ) = @{$ar_select};
+    my $s_return_select       = q##;
 
     AGGR: {
         given( $s_aggr ) {
@@ -86,13 +87,29 @@ sub create_select_column {
                     $s_aggr = $or_self->{config}{default_aggregation};
                     redo AGGR;
                 }
+                $s_return_select = '$COLUMN$';
             }
-            when ( 'min' ) { $s_aggr_func = 'MIN('              }
-            when ( 'max' ) { $s_aggr_func = 'MAX('              }
-            when ( 'avg' ) { $s_aggr_func = 'AVG('              }
-            when ( 'sum' ) { $s_aggr_func = 'SUM('              }
-            when ( 'cnt' ) { $s_aggr_func = 'COUNT('            }
-            when ( 'cnd' ) { $s_aggr_func = 'COUNT( DISTINCT'   }
+            when ( 'min' ) {
+                $s_return_select = 'MIN( $COLUMN$ )';
+            }
+            when ( 'max' ) {
+                $s_return_select = 'MAX( $COLUMN$ )';
+            }
+            when ( 'avg' ) {
+                $s_return_select = 'AVG( $COLUMN$ )';
+            }
+            when ( 'gem' ) {
+                $s_return_select = 'EXP( SUM( LOG( $COLUMN$ ) ) / COUNT( $COLUMN$ ) )';
+            }
+            when ( 'sum' ) {
+                $s_return_select = 'SUM( $COLUMN$ )';
+            }
+            when ( 'cnt' ) {
+                $s_return_select = 'COUNT( $COLUMN$ )';
+            }
+            when ( 'cnd' ) {
+                $s_return_select = 'COUNT( DISTINCT $COLUMN$ )';
+            }
             default {
                 require Carp;
                 Carp::confess("unknown aggregate function '$s_aggr'");
@@ -101,30 +118,24 @@ sub create_select_column {
         }
     } # AGGR
 
-    if ( $s_aggr ) {
-        if ( $h_used_selects{$or_self}{$s_aggr . "_$s_column"} ) {
-            return;
-        }
-        $h_used_selects{$or_self}{$s_aggr . "_$s_column"} = 1;
-        if ( any { $s_column eq $_  } keys %h_default_columns ) {
-            return ( '', "$s_aggr_func $h_default_columns{$s_column} ) AS " . $s_aggr . "_$s_column" );
-        }
-        else {
-            return ( $s_column, "$s_aggr_func bav$i_counter.bench_additional_value ) AS " . $s_aggr . "_$s_column" );
-        }
+    my ( $s_return_column, $s_replace_column );
+    my $s_replace_as = $s_aggr ? $s_aggr . "_$s_column" : $s_column;
+
+    if ( $h_used_selects{$or_self}{$s_replace_as} ) {
+        return;
+    }
+    $h_used_selects{$or_self}{$s_replace_as} = 1;
+    if ( any { $s_column eq $_  } keys %h_default_columns ) {
+        $s_replace_column = $h_default_columns{$s_column};
     }
     else {
-        if ( $h_used_selects{$or_self}{$s_column} ) {
-            return;
-        }
-        $h_used_selects{$or_self}{$s_column} = 1;
-        if ( any { $s_column eq $_  } keys %h_default_columns ) {
-            return ( '', "$h_default_columns{$s_column} AS $s_column" );
-        }
-        else {
-            return ( $s_column, "bav$i_counter.bench_additional_value AS $s_column" );
-        }
+        $s_return_column  = $s_column;
+        $s_replace_column = "bav$i_counter.bench_additional_value";
     }
+
+    $s_return_select =~ s/\$COLUMN\$/$s_replace_column/g;
+
+    return ( $s_return_column, "$s_return_select AS $s_replace_as", );
 
 }
 
