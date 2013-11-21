@@ -21,9 +21,7 @@ sub default_columns {
 }
 
 sub benchmark_operators {
-
     return ( '=', '!=', 'like', 'not like', '<', '>', '<=', '>=' );
-
 }
 
 sub create_where_clause {
@@ -87,28 +85,28 @@ sub create_select_column {
                     $s_aggr = $or_self->{config}{default_aggregation};
                     redo AGGR;
                 }
-                $s_return_select = '$COLUMN$';
+                $s_return_select = '${COLUMN}';
             }
             when ( 'min' ) {
-                $s_return_select = 'MIN( $COLUMN$ )';
+                $s_return_select = 'MIN( ${COLUMN} )';
             }
             when ( 'max' ) {
-                $s_return_select = 'MAX( $COLUMN$ )';
+                $s_return_select = 'MAX( ${COLUMN} )';
             }
             when ( 'avg' ) {
-                $s_return_select = 'AVG( $COLUMN$ )';
+                $s_return_select = 'AVG( ${COLUMN} )';
             }
             when ( 'gem' ) {
-                $s_return_select = 'EXP( SUM( LOG( $COLUMN$ ) ) / COUNT( $COLUMN$ ) )';
+                $s_return_select = 'EXP( SUM( LOG( ${COLUMN} ) ) / COUNT( ${COLUMN} ) )';
             }
             when ( 'sum' ) {
-                $s_return_select = 'SUM( $COLUMN$ )';
+                $s_return_select = 'SUM( ${COLUMN} )';
             }
             when ( 'cnt' ) {
-                $s_return_select = 'COUNT( $COLUMN$ )';
+                $s_return_select = 'COUNT( ${COLUMN} )';
             }
             when ( 'cnd' ) {
-                $s_return_select = 'COUNT( DISTINCT $COLUMN$ )';
+                $s_return_select = 'COUNT( DISTINCT ${COLUMN} )';
             }
             default {
                 require Carp;
@@ -118,22 +116,21 @@ sub create_select_column {
         }
     } # AGGR
 
-    my ( $s_return_column, $s_replace_column );
+    my ( $s_return_column );
     my $s_replace_as = $s_aggr ? $s_aggr . "_$s_column" : $s_column;
 
     if ( $h_used_selects{$or_self}{$s_replace_as} ) {
         return;
     }
-    $h_used_selects{$or_self}{$s_replace_as} = 1;
     if ( any { $s_column eq $_  } keys %h_default_columns ) {
-        $s_replace_column = $h_default_columns{$s_column};
+        $h_used_selects{$or_self}{$s_replace_as} = $h_default_columns{$s_column};
     }
     else {
-        $s_return_column  = $s_column;
-        $s_replace_column = "bav$i_counter.bench_additional_value";
+        $s_return_column                         = $s_column;
+        $h_used_selects{$or_self}{$s_replace_as} = "bav$i_counter.bench_additional_value";
     }
 
-    $s_return_select =~ s/\$COLUMN\$/$s_replace_column/g;
+    $s_return_select =~ s/\${COLUMN}/$h_used_selects{$or_self}{$s_replace_as}/g;
 
     return ( $s_return_column, "$s_return_select AS $s_replace_as", );
 
@@ -227,7 +224,7 @@ sub select_benchmark_values {
         }
     }
 
-    # where clause - additionals
+    # where clause
     my $i_counter = 0;
     if ( $hr_search->{where} ) {
         for my $ar_where ( @{$hr_search->{where}} ) {
@@ -379,6 +376,18 @@ sub select_benchmark_values {
         $s_order_by = 'ORDER BY ' . (join ', ', @a_order_by)
     }
 
+    # replace placeholders inside of raw sql where clause
+    my $s_raw_where = $hr_search->{where_sql};
+    if ( $s_raw_where ) {
+        $s_raw_where =~ s/
+            \${(.+?)}
+        /
+            $h_used_selects{$or_self}{$1}
+                ? $h_used_selects{$or_self}{$1}
+                : die "column '$1' not exists in SELECT clause"
+        /gex;
+    }
+
     return $or_self->execute_query(
         "
             SELECT
@@ -393,7 +402,10 @@ sub select_benchmark_values {
             WHERE
                 b.active = 1
                 AND bv.active = 1
-                " . ( join "\n", map { "AND $_" } @a_where ) . "
+                " .
+                ( @a_where      ? join "\n", map { "AND $_" } @a_where  : q## ) .
+                ( $s_raw_where  ? " $s_raw_where"                       : q## ) .
+            "
             $s_order_by
             $s_limit
             $s_offset

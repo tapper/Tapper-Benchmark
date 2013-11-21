@@ -802,6 +802,12 @@ Statement Handle.
             ['!=', 'machine', 'mx1.small'     ],
             ['=' , 'bench'  , 'testbenchmark' ],
         ],
+        where_sql   => q#,
+            AND NOT(
+                   ${testrun_id} = 123
+                OR ${bench_value} = '144'
+            )
+        #,
         limit       => 2,
         offset      => 1,
         order_by    => [
@@ -892,16 +898,21 @@ An Array of Array References containing restrictions for benchmark data points.
 
 2. Parameter in Sub-Array = restricted column
 
-A restrication is possible for additional values and the default columns.
+A restriction is possible for additional values and the default columns.
 
 3 - n. Parameters in Sub-Array = value for restriction
 
 In general there is just a single value. For '=' and '!=' a check for multiple
 values is possible. In SQL it is implemented with IN and NOT IN.
 
+=item where_sql [optional]
+
+A String containing an additional where clause. Please use this feature just if
+the "where" parameter is not sufficient to restrict.
+
 =item order_by [optional]
 
-An Array of Strings of an Array of Array References determining the order of
+An Array of Strings or an Array of Array References determining the order of
 returned benchmark data points.
 
 Array of Strings:
