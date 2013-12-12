@@ -45,7 +45,7 @@ sub create_where_clause {
     }
     elsif ( $ar_value->[0] eq '=' ) {
         if ( $#{$ar_value} > 1 ) {
-            $s_where_clause = "$s_column_name IN (" . (join ',', map {'?'} @{$ar_value}) . ')';
+            $s_where_clause = "$s_column_name IN (" . (join ',', map {'?'} 2..@{$ar_value}) . ')';
         }
         else {
             $s_where_clause = "$s_column_name = ?";
@@ -53,7 +53,7 @@ sub create_where_clause {
     }
     elsif ( $ar_value->[0] eq '!=' ) {
         if ( $#{$ar_value} > 1 ) {
-            $s_where_clause = "$s_column_name NOT IN (" . (join ',', map {'?'} @{$ar_value}) . ')';
+            $s_where_clause = "$s_column_name NOT IN (" . (join ',', map {'?'} 2..@{$ar_value}) . ')';
         }
         else {
             $s_where_clause = "$s_column_name != ?";

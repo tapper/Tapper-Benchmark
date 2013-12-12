@@ -573,7 +573,8 @@ Tapper::Benchmark - Save and search benchmark points by database
     my $b_success = $or_bench->add_single_benchmark({
         NAME => 'testbenchmark',
         UNIT => 'example unit',
-        data => [
+        testplanid => 813,
+        DATA => [
             {
                 VALUE          => 123.45,
                 testrun_id     => 123,
