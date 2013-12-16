@@ -3,6 +3,23 @@ package Tapper::Benchmark;
 use strict;
 use warnings;
 
+my $hr_default_config = {
+    select_cache        => 1,
+    default_aggregation => 'min',
+    tables              => {
+        unit_table                       => 'bench_units',
+        benchmark_table                  => 'benchs',
+        benchmark_value_table            => 'bench_values',
+        subsume_type_table               => 'bench_subsume_types',
+        benchmark_backup_value_table     => 'bench_backup_values',
+        additional_type_table            => 'bench_additional_types',
+        additional_value_table           => 'bench_additional_values',
+        additional_relation_table        => 'bench_additional_relations',
+        additional_type_relation_table   => 'bench_additional_type_relations',
+        backup_additional_relation_table => 'bench_backup_additional_relations',
+    },
+};
+
 my $fn_add_subsumed_point = sub {
 
     my ( $or_self, $hr_atts ) = @_;
@@ -79,7 +96,7 @@ sub new {
 
     my $or_self = bless {}, $s_self;
 
-    for my $s_key (qw/ dbh config /) {
+    for my $s_key (qw/ dbh /) {
         if (! $hr_atts->{$s_key} ) {
             require Carp;
             Carp::confess("missing '$s_key' parameter");
@@ -87,7 +104,20 @@ sub new {
         }
     }
 
-    $or_self->{config} = $hr_atts->{config};
+    # get tapper benchmark configuration
+    $or_self->{config} = { %{$hr_default_config} };
+
+    if ( $hr_atts->{config} ) {
+        require Hash::Merge;
+        $or_self->{config} = {
+            Hash::Merge
+                ->new('LEFT_PRECEDENT')
+                ->merge(
+                    %{$hr_atts->{config}},
+                    %{$or_self->{config}},
+                )
+        };
+    }
 
     require CHI;
     if ( $or_self->{config}{select_cache} ) {
@@ -111,8 +141,8 @@ sub new {
     else {
         $or_self->{query} = $s_module->new({
             dbh    => $hr_atts->{dbh},
-            debug  => $hr_atts->{debug},
-            config => $hr_atts->{config},
+            debug  => $hr_atts->{debug} || 0,
+            config => $or_self->{config},
         });
     }
 
@@ -668,7 +698,7 @@ Create a new B<Tapper::Benchmark> object.
 
 A B<DBI> database handle.
 
-=item config
+=item config [optional]
 
 Containing the path to the Tapper::Benchmark-Configuration-File. See
 B<Configuration> for details.
