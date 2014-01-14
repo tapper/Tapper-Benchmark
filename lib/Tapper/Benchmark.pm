@@ -330,7 +330,7 @@ sub add_single_benchmark {
     }
     else {
         require Carp;
-        Carp::confess('no benchmark data found');
+        Carp::cluck('no benchmark data found');
         return 0;
     }
 
