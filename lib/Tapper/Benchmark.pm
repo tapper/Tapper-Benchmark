@@ -831,12 +831,12 @@ Statement Handle.
         ],
         where       => [
             ['!=', 'machine', 'mx1.small'     ],
-            ['=' , 'bench'  , 'testbenchmark' ],
+            ['=' , 'NAME'   , 'testbenchmark' ],
         ],
         where_sql   => q#,
             AND NOT(
                    ${testrun_id} = 123
-                OR ${bench_value} = '144'
+                OR ${VALUE}      = '144'
             )
         #,
         limit       => 2,
@@ -853,11 +853,11 @@ Statement Handle.
 
 An Array of Strings or Array References containing additional selected columns.
 The default selected columns are:
-    bench           - name of benchmark
-    bench_unit      - benchmark unit [optional]
-    bench_value     - value of benchmark data point
-    bench_value_id  - unique benchmark data point identifier
-    bench_date      - benchmark data point created date in format YYYY-MM-DD HH:II:SS
+    NAME      - name of benchmark
+    UNIT      - benchmark unit [optional]
+    VALUE     - value of benchmark data point
+    VALUE_ID  - unique benchmark data point identifier
+    CREATED   - benchmark data point created date in format YYYY-MM-DD HH:II:SS
 
 Add additional data "testrun_id" and "machine" as columns to selection.
 
@@ -901,7 +901,7 @@ A aggregation is also possible for the default columns.
     ...
         select      => [
             ['max','testrun_id'],
-            ['avg','bench_value'],
+            ['avg','VALUE'],
         ],
     ...
 
@@ -912,7 +912,7 @@ An Array of Array References containing restrictions for benchmark data points.
     ...
         where       => [
             ['!=', 'machine', 'mx1.small'     ],
-            ['=' , 'bench'  , 'testbenchmark' ],
+            ['=' , 'NAME'   , 'testbenchmark' ],
         ],
     ...
 
@@ -988,7 +988,7 @@ Returning all benchmark data points as Array of Hashes.
         ],
         where       => [
             ['!=', 'machine', 'mx1.small'     ],
-            ['=' , 'bench'  , 'testbenchmark' ],
+            ['=' , 'NAME'   , 'testbenchmark' ],
         ],
         limit       => 2,
         offset      => 1,
@@ -1015,7 +1015,7 @@ Every "key" create a new nested hash.
         keys        => [
             'testrun_id',
             'machine',
-            'bench_value_id',
+            'VALUE_ID',
         ],
         select      => [
             'testrun_id',
@@ -1023,7 +1023,7 @@ Every "key" create a new nested hash.
         ],
         where       => [
             ['!=', 'machine', 'mx1.small'     ],
-            ['=' , 'bench'  , 'testbenchmark' ],
+            ['=' , 'NAME'   , 'testbenchmark' ],
         ],
         limit       => 2,
         offset      => 1,

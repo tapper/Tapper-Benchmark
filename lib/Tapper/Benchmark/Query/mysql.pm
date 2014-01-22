@@ -9,11 +9,11 @@ use List::MoreUtils qw( any );
 
 my %h_used_selects;
 my %h_default_columns = (
-    'bench'          => 'b.bench',
-    'bench_unit'     => 'bu.bench_unit',
-    'bench_value'    => 'bv.bench_value',
-    'bench_value_id' => 'bv.bench_value_id',
-    'bench_date'     => 'bv.created_at',
+    'NAME'      => 'b.bench',
+    'UNIT'      => 'bu.bench_unit',
+    'VALUE'     => 'bv.bench_value',
+    'VALUE_ID'  => 'bv.bench_value_id',
+    'CREATED'   => 'bv.created_at',
 );
 
 sub default_columns {
@@ -227,6 +227,7 @@ sub select_benchmark_values {
     # where clause
     my $i_counter = 0;
     if ( $hr_search->{where} ) {
+
         for my $ar_where ( @{$hr_search->{where}} ) {
             if ( any { $ar_where->[1] eq $_  } keys %h_default_columns ) {
                 my $s_column = splice( @{$ar_where}, 1, 1 );
