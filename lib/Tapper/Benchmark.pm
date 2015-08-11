@@ -744,21 +744,21 @@ Add one or more data points to a single benchmark to the database.
 
 =over 4
 
-=item 1. Parameter Hash => NAME
+=item 1st Parameter Hash => NAME
 
 The name of the benchmark for grouping benchmark data points.
 
-=item 1. Parameter Hash => data
+=item 1st Parameter Hash => data
 
 This parameter contains the benchmark data points. It's an array of hashes. The
 element C<VALUE> is the only required element in this hashes. The C<VALUE> is
 the benchmark data point value.
 
-=item 1. Parameter Hash => UNIT [optional]
+=item 1st Parameter Hash => UNIT [optional]
 
 Containing a unit for benchmark data point values.
 
-=item 2. Parameter Hash => force [optional]
+=item 2nd Parameter Hash => force [optional]
 
 Ignore forgivable errors while writing.
 
@@ -798,23 +798,23 @@ Add one or more data points for multiple benchmarks to the database.
 
 =over 4
 
-=item 1. Parameter Array of Hashes => NAME
+=item 1st Parameter Array of Hashes => NAME
 
 The name of the benchmark for grouping benchmark data points.
 
-=item 1. Parameter Hash => VALUE
+=item 1st Parameter Hash => VALUE
 
 The value is the benchmark data point value.
 
-=item 1. Parameter Hash => UNIT [optional]
+=item 1st Parameter Hash => UNIT [optional]
 
 Containing a unit for benchmark data point values.
 
-=item 1. Parameter Hash => all others
+=item 1st Parameter Hash => all others
 
 All other elements in the hashes are additional values added to this data point.
 
-=item 2. Parameter Hash => force [optional]
+=item 2nd Parameter Hash => force [optional]
 
 Ignore forgivable errors while writing.
 
