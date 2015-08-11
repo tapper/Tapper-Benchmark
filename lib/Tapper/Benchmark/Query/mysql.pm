@@ -1,4 +1,5 @@
 package Tapper::Benchmark::Query::mysql;
+# ABSTRACT: Tapper::Benchmark - qerying - MySQL backend
 
 use strict;
 use warnings;
@@ -830,11 +831,3 @@ sub delete_benchmark_value {
 }
 
 1;
-
-__END__
-
-=pod
-
-=head1 NAME
-
-Tapper::Benchmark::Query::mysql - Base class for the database work used by Tapper::Benchmark when MySQL is used

@@ -1,4 +1,5 @@
 package Tapper::Benchmark;
+# ABSTRACT: Autonomous SQL backend to store benchmarks
 
 use strict;
 use warnings;

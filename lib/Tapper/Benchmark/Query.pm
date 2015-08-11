@@ -1,4 +1,5 @@
 package Tapper::Benchmark::Query;
+# ABSTRACT: Tapper::Benchmark - qerying - base class
 
 use strict;
 use warnings;
@@ -106,11 +107,3 @@ sub finish_transaction {
 }
 
 1;
-
-__END__
-
-=pod
-
-=head1 NAME
-
-Tapper::Benchmark::Query - Base class for the database work used by Tapper::Benchmark
