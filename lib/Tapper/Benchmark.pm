@@ -680,7 +680,7 @@ way to the the database. A search function with complexe filters already exists.
 
 =head3 new
 
-=over
+=over 4
 
 =item
 
@@ -692,7 +692,7 @@ Create a new B<Tapper::Benchmark> object.
         config => YAML::Syck::LoadFile('~/conf/tapper_benchmark.conf'),
     });
 
-=over
+=over 4
 
 =item dbh
 
@@ -710,9 +710,12 @@ written to STDOUT. The default is 0.
 
 =back
 
+=back
+
+
 =head3 add_single_benchmark
 
-=over
+=over 4
 
 =item
 
@@ -739,7 +742,7 @@ Add one or more data points to a single benchmark to the database.
         force => 1
     });
 
-=over
+=over 4
 
 =item 1. Parameter Hash => NAME
 
@@ -761,9 +764,11 @@ Ignore forgivable errors while writing.
 
 =back
 
+=back
+
 =head3 add_multi_benchmark
 
-=over
+=over 4
 
 =item
 
@@ -791,7 +796,7 @@ Add one or more data points for multiple benchmarks to the database.
         force => 1
     });
 
-=over
+=over 4
 
 =item 1. Parameter Array of Hashes => NAME
 
@@ -815,9 +820,11 @@ Ignore forgivable errors while writing.
 
 =back
 
+=back
+
 =head3 search
 
-=over
+=over 4
 
 =item
 
@@ -847,7 +854,7 @@ Statement Handle.
         ],
     });
 
-=over
+=over 4
 
 =item select [optional]
 
@@ -973,9 +980,11 @@ An integer value which determine the number of omitted benchmark data points.
 
 =back
 
+=back
+
 =head3 search_array
 
-=over
+=over 4
 
 =item
 
@@ -1002,7 +1011,7 @@ Returning all benchmark data points as Array of Hashes.
 
 =head3 search_hash
 
-=over
+=over 4
 
 =item
 
@@ -1033,9 +1042,11 @@ Every "key" create a new nested hash.
         ],
     });
 
+=back
+
 =head3 subsume
 
-=over
+=over 4
 
 =item
 
@@ -1054,7 +1065,7 @@ It is highly recommended to do this periodically for better search performance.
         backup              => 0,
     });
 
-=over
+=over 4
 
 =item subsume_type
 
@@ -1088,15 +1099,17 @@ isn't desired a false value must be passed.
 
 =back
 
+=back
+
 =head1 Configuration
 
-=over
+=over 4
 
 =item
 
 The following elements are required in configuration:
 
-=over
+=over 4
 
 =item default_aggregation
 
@@ -1123,3 +1136,7 @@ Containing the names of the tables used bei B<Tapper::Benchmark>
 =item select_cache [optional]
 
 In case of a true value the module cache some select results
+
+=back
+
+=back
