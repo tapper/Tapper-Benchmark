@@ -655,7 +655,7 @@ Tapper::Benchmark - Save and search benchmark points by database
         ],
         order_by    => [
             'machine',
-            ['ASC','testrun_id',{ numeric => 1 }]
+            ['testrun_id','ASC',{ numeric => 1 }]
         ],
         limit       => 2,
         offset      => 1,
@@ -851,7 +851,7 @@ Statement Handle.
         offset      => 1,
         order_by    => [
             'machine',
-            ['ASC','testrun_id']
+            ['testrun_id','ASC']
         ],
     });
 
@@ -1004,7 +1004,7 @@ Returning all benchmark data points as Array of Hashes.
         offset      => 1,
         order_by    => [
             'machine',
-            ['ASC','testrun_id']
+            ['testrun_id','ASC']
         ],
     });
 
@@ -1039,7 +1039,7 @@ Every "key" create a new nested hash.
         offset      => 1,
         order_by    => [
             'machine',
-            ['ASC','testrun_id']
+            ['testrun_id','ASC']
         ],
     });
 
