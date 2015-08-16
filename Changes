@@ -1,6 +1,8 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+
+0.001     2015-08-16
         - Initial release - CPAN DAY - 2015-08-16
         - based on the released code from early 2014
         - This is a library to provide a schema for
