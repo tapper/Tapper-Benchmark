@@ -1,0 +1,11 @@
+Revision history for {{$dist->name}}
+
+{{$NEXT}}
+        - Initial release - CPAN DAY - 2015-08-16
+        - based on the released code from early 2014
+        - This is a library to provide a schema for
+          storing benchmark values in an SQL database
+        - Primarily targets mysql, SQLite support
+          is basically so far by cutting away known
+          trouble maker SQL statement parts
+        - Read more about the schema on http://benchmarkanything.org/
