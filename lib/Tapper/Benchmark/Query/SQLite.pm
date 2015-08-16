@@ -136,7 +136,7 @@ sub create_select_column {
 
     $s_return_select =~ s/\${COLUMN}/$h_used_selects{$or_self}{$s_replace_as}/g;
 
-    return ( $s_return_column, "$s_return_select AS $s_replace_as", );
+    return ( $s_return_column, "$s_return_select AS '$s_replace_as'", );
 
 }
 
