@@ -40,7 +40,7 @@ CREATE TABLE `bench_values` (
   `bench_value_id` INTEGER PRIMARY KEY NOT NULL  , -- COMMENT 'unique key (PK)',
   `bench_id` INT(10)  NOT NULL , -- COMMENT 'FK to benchs',
   `bench_subsume_type_id` TINYINT(3)  NOT NULL , -- COMMENT 'FK to bench_subsume_types',
-  `bench_value` FLOAT NULL , -- COMMENT 'value for bench data point',
+  `bench_value` VARCHAR(255) NULL , -- COMMENT 'value for bench data point',
   `active` tinyint(3) NOT NULL , -- COMMENT 'is entry still active (0=no,1=yes)',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP , -- COMMENT 'creation date',
   CONSTRAINT `fk_bench_values_01`
