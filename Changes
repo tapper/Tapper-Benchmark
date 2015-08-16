@@ -1,6 +1,7 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+        - store values as VARCHAR for max precision
 
 0.001     2015-08-16
         - Initial release - CPAN DAY - 2015-08-16
