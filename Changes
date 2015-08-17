@@ -1,7 +1,10 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
-        - store values as VARCHAR for max precision
+        - store benchmark VALUEs as VARCHAR to avoid rounding
+          and allow non-number values en passant
+        - dependency++ to DBD::SQLite 1.48 to avoid error
+          'no such column: bav2.bench_additional_value"
 
 0.001     2015-08-16
         - Initial release - CPAN DAY - 2015-08-16
