@@ -1,6 +1,8 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+
+0.002     2015-08-17
         - store benchmark VALUEs as VARCHAR to avoid rounding
           and allow non-number values en passant
         - dependency++ to DBD::SQLite 1.48 to avoid error
