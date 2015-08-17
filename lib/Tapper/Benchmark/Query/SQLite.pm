@@ -239,13 +239,14 @@ sub select_benchmark_values {
                 push @a_where_vals , @{$ar_where}[1..$#{$ar_where}];
             }
             else {
+                my $s_additional_type = splice( @{$ar_where}, 1, 1 );
                 my $hr_additional_type = $or_self
-                    ->select_addtype_by_name( splice( @{$ar_where}, 1, 1 ) )
+                    ->select_addtype_by_name( $s_additional_type )
                     ->fetchrow_hashref()
                 ;
                 if ( !$hr_additional_type || !$hr_additional_type->{bench_additional_type_id} ) {
                     require Carp;
-                    Carp::confess("benchmark additional value '$ar_where->[1]' not exists");
+                    Carp::confess("benchmark additional value '$s_additional_type' not exists");
                     return;
                 }
                 push @a_from, "
