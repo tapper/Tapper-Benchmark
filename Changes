@@ -1,6 +1,8 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+
+0.003     2015-08-18
         - handling of duplicates and undefined values
 
 0.002     2015-08-17
