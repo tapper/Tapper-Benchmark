@@ -636,7 +636,7 @@ sub insert_addtyperelation {
     my ( $or_self, @a_vals ) = @_;
 
     return $or_self->execute_query( "
-        INSERT INTO $or_self->{config}{tables}{additional_type_relation_table}
+        INSERT OR IGNORE INTO $or_self->{config}{tables}{additional_type_relation_table}
             ( bench_id, bench_additional_type_id, created_at )
         VALUES
             ( ?, ?, CURRENT_TIMESTAMP )
@@ -675,7 +675,7 @@ sub insert_benchmark_value {
     my ( $or_self, @a_vals ) = @_;
 
     return $or_self->execute_query( "
-        INSERT INTO $or_self->{config}{tables}{benchmark_value_table}
+        INSERT OR IGNORE INTO $or_self->{config}{tables}{benchmark_value_table}
             ( bench_id, bench_subsume_type_id, bench_value, active, created_at )
         VALUES
             ( ?, ?, ?, 1, CURRENT_TIMESTAMP )
@@ -789,7 +789,7 @@ sub insert_addvaluerelation {
     my ( $or_self, @a_vals ) = @_;
 
     return $or_self->execute_query( "
-        INSERT INTO $or_self->{config}{tables}{additional_relation_table}
+        INSERT OR IGNORE INTO $or_self->{config}{tables}{additional_relation_table}
             ( bench_value_id, bench_additional_value_id, active, created_at )
         VALUES
             ( ?, ?, 1, CURRENT_TIMESTAMP )
