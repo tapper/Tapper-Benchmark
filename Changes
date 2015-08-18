@@ -1,6 +1,7 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+        - handling of duplicates and undefined values
 
 0.002     2015-08-17
         - store benchmark VALUEs as VARCHAR to avoid rounding
