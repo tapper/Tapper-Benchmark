@@ -239,6 +239,7 @@ sub add_single_benchmark {
             ADDITIONAL: for my $s_key ( keys %{$hr_point} ) {
 
                 next ADDITIONAL if $s_key eq 'VALUE';
+                next ADDITIONAL if not defined $hr_point->{$s_key};
 
                 # additional type
                 my $i_addtype_id;
