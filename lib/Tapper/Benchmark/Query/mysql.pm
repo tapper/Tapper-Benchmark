@@ -650,6 +650,8 @@ sub insert_unit {
             ( bench_unit, created_at )
         VALUES
             ( ?, NOW() )
+        ON DUPLICATE KEY
+            UPDATE bench_unit_id=LAST_INSERT_ID(bench_unit_id)
     ", @a_vals );
 
 }
@@ -663,6 +665,8 @@ sub insert_benchmark {
             ( bench, bench_unit_id, active, created_at )
         VALUES
             ( ?, ?, 1, NOW() )
+        ON DUPLICATE KEY
+            UPDATE bench_id=LAST_INSERT_ID(bench_id)
     ", @a_vals );
 
 }
@@ -764,6 +768,8 @@ sub insert_addtype {
             ( bench_additional_type, created_at )
         VALUES
             ( ?, NOW() )
+        ON DUPLICATE KEY
+            UPDATE bench_additional_type_id=LAST_INSERT_ID(bench_additional_type_id)
     ", @a_vals );
 
 }
@@ -777,6 +783,8 @@ sub insert_addvalue {
             ( bench_additional_type_id, bench_additional_value, created_at )
         VALUES
             ( ?, ?, NOW() )
+        ON DUPLICATE KEY
+            UPDATE bench_additional_value_id=LAST_INSERT_ID(bench_additional_value_id)
     ", @a_vals );
 
 }
