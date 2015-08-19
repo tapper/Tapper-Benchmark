@@ -583,6 +583,19 @@ sub select_benchmark {
 
 }
 
+sub select_benchmark_names {
+
+    my ( $or_self, @a_vals ) = @_;
+
+    my $query = "
+        SELECT DISTINCT bench
+        FROM $or_self->{config}{tables}{benchmark_table}";
+    $query .= "
+        WHERE bench LIKE ? " if @a_vals;
+    return $or_self->execute_query( $query, @a_vals );
+
+}
+
 sub select_unit {
 
     my ( $or_self, @a_vals ) = @_;

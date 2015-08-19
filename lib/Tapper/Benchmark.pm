@@ -396,6 +396,34 @@ sub search {
 
 }
 
+sub list_benchmark_names {
+
+    my ( $or_self, $s_pattern ) = @_;
+
+    my $ar_pattern = defined($s_pattern) ? [$s_pattern] : [];
+
+    my $s_key;
+    if ( $or_self->{cache} ) {
+        require JSON::XS;
+        $s_key = JSON::XS::encode_json($ar_pattern);
+        if ( my $ar_search_data = $or_self->{cache}->get("list_benchmark_names||$s_key") ) {
+            return $ar_search_data;
+        }
+    }
+
+    my $ar_result = $or_self->{query}
+        ->select_benchmark_names( @$ar_pattern )
+        ->fetchall_arrayref([0]);
+    my $ar_benchmark_names = [ map { $_->[0] } @$ar_result ];
+
+    if ( $or_self->{cache} ) {
+        $or_self->{cache}->set( "list_benchmark_names||$s_key" => $ar_benchmark_names );
+    }
+
+    return $ar_benchmark_names;
+
+}
+
 sub search_array {
 
     my ( $or_self, $hr_search ) = @_;
