@@ -1,6 +1,7 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+        - get list of benchmark NAMEs
 
 0.003     2015-08-18
         - handling of duplicates and undefined values
