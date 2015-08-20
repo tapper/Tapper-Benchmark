@@ -1,6 +1,8 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+
+0.004     2015-08-20
         - get list of benchmark NAMEs
 
 0.003     2015-08-18
