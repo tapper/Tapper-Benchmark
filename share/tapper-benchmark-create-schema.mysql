@@ -25,7 +25,7 @@ CREATE TABLE `bench_subsume_types` (
 
 CREATE TABLE `bench_units` (
   `bench_unit_id` TINYINT(3) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'unique key (PK)',
-  `bench_unit` VARCHAR(64) NOT NULL COMMENT 'unique string identifier',
+  `bench_unit` VARCHAR(255) NOT NULL COMMENT 'unique string identifier',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'creation date',
   PRIMARY KEY (`bench_unit_id`),
   UNIQUE INDEX `ux_bench_units_01` (`bench_unit` ASC)
@@ -34,7 +34,7 @@ CREATE TABLE `bench_units` (
 CREATE TABLE `benchs` (
   `bench_id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'unique key (PK)',
   `bench_unit_id` TINYINT(3) UNSIGNED NULL,
-  `bench` VARCHAR(64) NOT NULL COMMENT 'unique string identifier',
+  `bench` VARCHAR(2048) NOT NULL COMMENT 'unique string identifier',
   `active` TINYINT(3) UNSIGNED NOT NULL COMMENT 'is entry still active (1=yes,0=no)',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'creation date',
   PRIMARY KEY (`bench_id`),
@@ -51,7 +51,7 @@ CREATE TABLE `bench_values` (
   `bench_value_id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'unique key (PK)',
   `bench_id` INT(10) UNSIGNED NOT NULL COMMENT 'FK to benchs',
   `bench_subsume_type_id` TINYINT(3) UNSIGNED NOT NULL COMMENT 'FK to bench_subsume_types',
-  `bench_value` VARCHAR(255) NULL COMMENT 'value for bench data point',
+  `bench_value` VARCHAR(2048) NULL COMMENT 'value for bench data point',
   `active` tinyint(3) unsigned NOT NULL COMMENT 'is entry still active (0=no,1=yes)',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'creation date',
   PRIMARY KEY (`bench_value_id`),
@@ -71,7 +71,7 @@ CREATE TABLE `bench_values` (
 
 CREATE TABLE `bench_additional_types` (
   `bench_additional_type_id` SMALLINT(5) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'unique key (PK)',
-  `bench_additional_type` VARCHAR(32) NOT NULL COMMENT 'unique string identifier',
+  `bench_additional_type` VARCHAR(2048) NOT NULL COMMENT 'unique string identifier',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'creation date',
   PRIMARY KEY (`bench_additional_type_id`),
   UNIQUE INDEX `ux_bench_additional_types_01` (`bench_additional_type` ASC)
@@ -80,7 +80,7 @@ CREATE TABLE `bench_additional_types` (
 CREATE TABLE `bench_additional_values` (
   `bench_additional_value_id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'unique key (PK)',
   `bench_additional_type_id` SMALLINT(5) UNSIGNED NOT NULL COMMENT 'FK to bench_additional_types',
-  `bench_additional_value` VARCHAR(128) NOT NULL COMMENT 'additional value',
+  `bench_additional_value` VARCHAR(2048) NOT NULL COMMENT 'additional value',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'creation date',
   PRIMARY KEY (`bench_additional_value_id`),
   INDEX `fk_bench_additional_values_01` (`bench_additional_type_id` ASC),
