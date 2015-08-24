@@ -1115,6 +1115,27 @@ Every "key" create a new nested hash.
 
 =back
 
+
+=head3 select_benchmark_point_essentials
+
+Get a single data points from the database including all essential
+fields (NAME, VALUE, UNIT) and additional fields.
+
+ my $point = $or_bench->get_single_benchmark_point($value_id);
+
+=back
+
+
+=head3 list_benchmark_names
+
+Get a list of all benchmark NAMEs, optionally matching a given pattern
+(SQL LIKE syntax, i.e., using C<%> as placeholder.
+
+ $benchmarkanythingdata = $or_bench->list_benchmark_names($pattern);
+
+=back
+
+
 =head3 subsume
 
 =over 4
