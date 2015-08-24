@@ -1,6 +1,8 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+
+0.005     2015-08-24
         - larger field sizes
         - select_benchmark_point_essentials()
           Get NAME, VALUE, UNIT of a single benchmark point
