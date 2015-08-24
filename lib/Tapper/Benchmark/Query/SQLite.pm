@@ -448,6 +448,43 @@ sub select_benchmark_point_essentials {
 
 }
 
+sub select_complete_benchmark_point {
+
+    my ( $or_self, @a_vals ) = @_;
+
+    my $query = "
+        SELECT
+          bat.bench_additional_type,
+          bav.bench_additional_value
+        FROM
+          benchs b
+        JOIN
+          bench_values bv
+          ON
+            b.bench_id = bv.bench_id
+        JOIN
+          bench_additional_type_relations batr
+          ON
+            bv.bench_id = batr.bench_id
+        JOIN
+          bench_additional_types bat
+          ON
+            batr.bench_additional_type_id = bat.bench_additional_type_id
+        JOIN
+          bench_additional_relations bar
+          ON
+            bv.bench_value_id = bar.bench_value_id
+        JOIN
+          bench_additional_values bav
+          ON
+            bar.bench_additional_value_id = bav.bench_additional_value_id AND
+            bat.bench_additional_type_id  = bav.bench_additional_type_id
+        WHERE
+          bv.bench_value_id = ?
+        ORDER BY
+          bat.bench_additional_type";
+    return $or_self->execute_query( $query, @a_vals );
+}
 
 sub select_addtype_by_name {
 
