@@ -1,6 +1,13 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+        - larger field sizes
+        - select_benchmark_point_essentials()
+          Get NAME, VALUE, UNIT of a single benchmark point
+        - select_complete_benchmark_point()
+          Get all additional key/value fields of a single benchmark point
+        - get_single_benchmark_point()
+          Reconstruct a complete single benchmark point
 
 0.004     2015-08-20
         - get list of benchmark NAMEs
