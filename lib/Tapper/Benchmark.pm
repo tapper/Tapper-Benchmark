@@ -424,6 +424,47 @@ sub list_benchmark_names {
 
 }
 
+sub get_single_benchmark_point {
+
+    my ( $or_self, $i_bench_value_id ) = @_;
+
+    return {} unless $i_bench_value_id;
+
+    # cache?
+    my $s_key;
+    if ( $or_self->{cache} ) {
+        require JSON::XS;
+        $s_key = JSON::XS::encode_json({bench_value_id => $i_bench_value_id});
+        if ( my $hr_search_data = $or_self->{cache}->get("get_single_benchmark_point||$s_key") ) {
+            return $hr_search_data;
+        }
+    }
+
+    # fetch all additional key/value fields
+    my $ar_query_result = $or_self->{query}
+        ->select_complete_benchmark_point( $i_bench_value_id )
+        ->fetchall_arrayref({});
+
+    # fetch essentials, like NAME, VALUE, UNIT
+    my $hr_essentials = $or_self->{query}
+        ->select_benchmark_point_essentials( $i_bench_value_id )
+        ->fetchrow_hashref();
+
+    # create complete BenchmarkAnything-like key/value entry
+    my $hr_result;
+    $hr_result          = { map { ($_->{bench_additional_type} => $_->{bench_additional_value} ) } @$ar_query_result };
+    $hr_result->{NAME}  = $hr_essentials->{bench};
+    $hr_result->{VALUE} = $hr_essentials->{bench_value};
+    $hr_result->{UNIT}  = $hr_essentials->{bench_unit} if $hr_essentials->{bench_unit};
+
+    # cache!
+    if ( $or_self->{cache} ) {
+        $or_self->{cache}->set( "get_single_benchmark_point||$s_key" => $hr_result );
+    }
+
+    return $hr_result;
+}
+
 sub search_array {
 
     my ( $or_self, $hr_search ) = @_;
