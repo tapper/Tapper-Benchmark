@@ -419,6 +419,33 @@ sub select_benchmark_values {
 
 }
 
+sub select_benchmark_point_essentials {
+
+    my ( $or_self, @a_vals ) = @_;
+
+    return $or_self->execute_query( "
+        SELECT
+          b.bench,
+          bv.bench_value,
+          bu.bench_unit
+        FROM
+          $or_self->{config}{tables}{benchmark_table} b
+        JOIN
+          $or_self->{config}{tables}{benchmark_value_table} bv
+          ON
+            b.bench_id = bv.bench_id
+        LEFT JOIN
+          $or_self->{config}{tables}{unit_table} bu
+          ON
+            b.bench_unit_id = bu.bench_unit_id
+        WHERE
+          bv.bench_value_id = ?
+        ;
+    ", @a_vals );
+
+}
+
+
 sub select_addtype_by_name {
 
     my ( $or_self, @a_vals ) = @_;
