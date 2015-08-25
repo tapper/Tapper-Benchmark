@@ -5,7 +5,7 @@ use strict;
 use warnings;
 
 my $hr_default_config = {
-    select_cache        => 1,
+    select_cache        => 0,
     default_aggregation => 'min',
     tables              => {
         unit_table                       => 'bench_units',
