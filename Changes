@@ -1,6 +1,7 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+        - disable caching due to wrong behaviour
 
 0.005     2015-08-24
         - larger field sizes
