@@ -837,11 +837,8 @@ Ignore forgivable errors while writing.
 
 =back
 
+
 =head3 add_multi_benchmark
-
-=over 4
-
-=item
 
 Add one or more data points for multiple benchmarks to the database.
 
@@ -891,13 +888,8 @@ Ignore forgivable errors while writing.
 
 =back
 
-=back
 
 =head3 search
-
-=over 4
-
-=item
 
 Search for benchmark data points in the database. Function returns a DBI
 Statement Handle.
@@ -1051,13 +1043,8 @@ An integer value which determine the number of omitted benchmark data points.
 
 =back
 
-=back
 
 =head3 search_array
-
-=over 4
-
-=item
 
 Returning all benchmark data points as Array of Hashes.
 
@@ -1078,13 +1065,8 @@ Returning all benchmark data points as Array of Hashes.
         ],
     });
 
-=back
 
 =head3 search_hash
-
-=over 4
-
-=item
 
 Returning all benchmark data points as Hash of Hashes. As compared to search
 C<search_array> this function needs the parameter C<keys>. C<keys> is an Array
@@ -1113,8 +1095,6 @@ Every "key" create a new nested hash.
         ],
     });
 
-=back
-
 
 =head3 select_benchmark_point_essentials
 
@@ -1122,8 +1102,6 @@ Get a single data points from the database including all essential
 fields (NAME, VALUE, UNIT) and additional fields.
 
  my $point = $or_bench->get_single_benchmark_point($value_id);
-
-=back
 
 
 =head3 list_benchmark_names
@@ -1133,14 +1111,8 @@ Get a list of all benchmark NAMEs, optionally matching a given pattern
 
  $benchmarkanythingdata = $or_bench->list_benchmark_names($pattern);
 
-=back
-
 
 =head3 subsume
-
-=over 4
-
-=item
 
 This is a maintenance function for reducing the number of data points in the
 database. Calling this function reduces the rows in the benchmark values table
@@ -1191,13 +1163,8 @@ isn't desired a false value must be passed.
 
 =back
 
-=back
 
 =head1 Configuration
-
-=over 4
-
-=item
 
 The following elements are required in configuration:
 
@@ -1228,7 +1195,5 @@ Containing the names of the tables used bei B<Tapper::Benchmark>
 =item select_cache [optional]
 
 In case of a true value the module cache some select results
-
-=back
 
 =back
