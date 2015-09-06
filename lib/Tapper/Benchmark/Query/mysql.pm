@@ -705,6 +705,20 @@ sub select_addtyperelation {
 
 }
 
+sub select_raw_bench_bundle {
+
+    my ( $or_self, @a_vals ) = @_;
+
+    return $or_self->execute_query( "
+        SELECT raw_bench_bundle_id,
+               raw_bench_bundle_serialized
+        FROM raw_bench_bundles
+        WHERE processed=0
+        ORDER BY raw_bench_bundle_id ASC
+        LIMIT 1
+    ", @a_vals );
+}
+
 sub insert_addtyperelation {
 
     my ( $or_self, @a_vals ) = @_;
@@ -757,6 +771,18 @@ sub insert_benchmark_value {
             ( bench_id, bench_subsume_type_id, bench_value, active, created_at )
         VALUES
             ( ?, ?, ?, 1, NOW() )
+    ", @a_vals );
+
+}
+
+sub insert_raw_bench_bundle {
+
+    my ( $or_self, @a_vals ) = @_;
+
+    return $or_self->execute_query( "
+        INSERT INTO raw_bench_bundles
+            (raw_bench_bundle_serialized)
+        VALUES ( ? )
     ", @a_vals );
 
 }
@@ -891,6 +917,18 @@ sub update_benchmark_backup_value {
         new_bench_value_id
         old_bench_value_id
     /} );
+
+}
+
+sub update_raw_bench_bundle_set_processed {
+
+    my ( $or_self, @a_vals ) = @_;
+
+    return $or_self->execute_query( "
+        UPDATE raw_bench_bundles
+        SET processed=1
+        WHERE raw_bench_bundle_id = ?
+    ", @a_vals );
 
 }
 
