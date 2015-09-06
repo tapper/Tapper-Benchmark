@@ -12,6 +12,7 @@ DROP TABLE IF EXISTS `bench_values`;
 DROP TABLE IF EXISTS `benchs`;
 DROP TABLE IF EXISTS `bench_units`;
 DROP TABLE IF EXISTS `bench_subsume_types`;
+DROP TABLE IF EXISTS `raw_bench_bundles`;
 
 CREATE TABLE `bench_subsume_types` (
   `bench_subsume_type_id` TINYINT(3) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'unique key (PK)',
@@ -45,7 +46,7 @@ CREATE TABLE `benchs` (
     REFERENCES `bench_units` (`bench_unit_id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION
-) COMMENT 'containg benchmark head data';
+) COMMENT 'containing benchmark head data';
 
 CREATE TABLE `bench_values` (
   `bench_value_id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'unique key (PK)',
@@ -179,6 +180,20 @@ CREATE TABLE `bench_backup_additional_relations` (
     ON DELETE NO ACTION
     ON UPDATE NO ACTION
 ) COMMENT='add additional values to benchmarks';
+
+CREATE TABLE `raw_bench_bundles` (
+ `raw_bench_bundle_id` INTEGER PRIMARY KEY AUTO_INCREMENT NOT NULL,
+ `raw_bench_bundle_serialized` TEXT NOT NULL,
+ `processed` tinyint(3) NOT NULL DEFAULT 0 COMMENT 'is entry processed (0=no,1=yes)',
+ `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'creation date'
+) COMMENT='queue raw incoming data for later processing';
+-- Usage:
+-- * create elements:
+--   INSERT INTO raw_bench_bundles (raw_bench_bundle_serialized) VALUES ('hot content');
+-- * get next:
+--   SELECT raw_bench_bundle_id, raw_bench_bundle_serialized FROM raw_bench_bundles WHERE processed=0 ORDER BY raw_bench_bundle_id ASC LIMIT 1;
+-- * mark as done:
+--   UPDATE raw_bench_bundles SET processed=1 WHERE raw_bench_bundle_id=1;
 
 SET FOREIGN_KEY_CHECKS = 1;
 
