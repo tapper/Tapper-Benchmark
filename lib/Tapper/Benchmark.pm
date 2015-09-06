@@ -340,6 +340,55 @@ sub add_single_benchmark {
 
 }
 
+sub enqueue_multi_benchmark {
+
+    my ( $or_self, $ar_data_points, $hr_options ) = @_;
+
+    require Sereal::Encoder;
+
+    my $s_serialized = Sereal::Encoder::encode_sereal($ar_data_points);
+    $or_self->{query}->insert_raw_bench_bundle($s_serialized);
+
+    return 1;
+
+}
+
+# deques a single bundle (can contain multiple data points)
+sub process_queued_multi_benchmark {
+
+    my ( $or_self, $hr_options ) = @_;
+
+    require Sereal::Decoder;
+
+    # TODO: BEGIN_transaction
+    # TODO: LOCK - so only one worker works here!
+
+    my $ar_result = $or_self->{query}
+     ->select_raw_bench_bundle
+      ->fetchrow_hashref();
+
+    my $i_id           = $ar_result->{raw_bench_bundle_id};
+    my $s_serialized   = $ar_result->{raw_bench_bundle_serialized};
+
+    return unless $i_id;
+
+    my $ar_data_points = Sereal::Decoder::decode_sereal($s_serialized);
+
+    # preserve order, otherwise add_multi_benchmark() would reorder to optimize insert
+    foreach my $chunk (@$ar_data_points)
+    {
+            $or_self->add_multi_benchmark([$chunk], $hr_options);
+    }
+
+    $or_self->{query}->update_raw_bench_bundle_set_processed($i_id);
+
+    # TODO: UNLOCK
+    # TODO: END_transaction
+
+    return $i_id;
+
+}
+
 sub add_multi_benchmark {
 
     my ( $or_self, $ar_data_points, $hr_options ) = @_;

@@ -1,5 +1,5 @@
 package Tapper::Benchmark::Query;
-# ABSTRACT: Tapper::Benchmark - qerying - base class
+# ABSTRACT: Tapper::Benchmark - querying - base class
 
 use strict;
 use warnings;
