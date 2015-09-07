@@ -346,7 +346,7 @@ sub enqueue_multi_benchmark {
 
     require Sereal::Encoder;
 
-    my $s_serialized = Sereal::Encoder::encode_sereal($ar_data_points);
+    my $s_serialized = Sereal::Encoder->new({compress => 1})->encode($ar_data_points);
     $or_self->{query}->insert_raw_bench_bundle($s_serialized);
 
     return 1;
