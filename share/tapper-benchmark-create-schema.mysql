@@ -184,6 +184,7 @@ CREATE TABLE `bench_backup_additional_relations` (
 CREATE TABLE `raw_bench_bundles` (
  `raw_bench_bundle_id` INTEGER PRIMARY KEY AUTO_INCREMENT NOT NULL,
  `raw_bench_bundle_serialized` TEXT NOT NULL,
+ `processing` tinyint(3) NOT NULL DEFAULT 0 , -- COMMENT 'is entry processed (0=no,1=yes)',
  `processed` tinyint(3) NOT NULL DEFAULT 0 COMMENT 'is entry processed (0=no,1=yes)',
  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'creation date'
 ) COMMENT='queue raw incoming data for later processing';
