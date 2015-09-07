@@ -708,16 +708,28 @@ sub select_addtyperelation {
 
 }
 
-sub select_raw_bench_bundle {
+sub select_raw_bench_bundle_for_lock {
 
     my ( $or_self, @a_vals ) = @_;
 
     return $or_self->execute_query( "
-        SELECT raw_bench_bundle_id,
-               raw_bench_bundle_serialized
+        SELECT raw_bench_bundle_id
         FROM raw_bench_bundles
-        WHERE processed=0
+        WHERE processed=0 AND
+              processing=0
         ORDER BY raw_bench_bundle_id ASC
+        LIMIT 1
+    ", @a_vals );
+}
+
+sub select_raw_bench_bundle_for_processing {
+
+    my ( $or_self, @a_vals ) = @_;
+
+    return $or_self->execute_query( "
+        SELECT raw_bench_bundle_serialized
+        FROM raw_bench_bundles
+        WHERE raw_bench_bundle_id = ?
         LIMIT 1
     ", @a_vals );
 }
@@ -915,13 +927,26 @@ sub update_benchmark_backup_value {
 
 }
 
+sub start_processing_raw_bench_bundle {
+
+    my ( $or_self, @a_vals ) = @_;
+
+    return $or_self->execute_query( "
+        UPDATE raw_bench_bundles
+        SET processing = 1
+        WHERE raw_bench_bundle_id = ?
+    ", @a_vals );
+
+}
+
 sub update_raw_bench_bundle_set_processed {
 
     my ( $or_self, @a_vals ) = @_;
 
     return $or_self->execute_query( "
         UPDATE raw_bench_bundles
-        SET processed=1
+        SET processed=1,
+            processing=0
         WHERE raw_bench_bundle_id = ?
     ", @a_vals );
 
