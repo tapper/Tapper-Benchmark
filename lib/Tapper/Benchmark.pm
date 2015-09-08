@@ -369,7 +369,6 @@ sub process_queued_multi_benchmark {
     $or_self->{query}->start_transaction;
     eval {
             $ar_results = $or_self->{query}->select_raw_bench_bundle_for_lock;
-            goto RETURN unless defined $ar_results;
             $or_result  = $ar_results->fetchrow_hashref;
             $i_id       = $or_result->{raw_bench_bundle_id};
             goto RETURN unless $i_id;
@@ -387,10 +386,7 @@ sub process_queued_multi_benchmark {
             $ar_data_points = Sereal::Decoder::decode_sereal($s_serialized);
 
             # preserve order, otherwise add_multi_benchmark() would reorder to optimize insert
-            foreach my $chunk (@$ar_data_points)
-            {
-                    $or_self->add_multi_benchmark([$chunk], $hr_options);
-            }
+            $or_self->add_multi_benchmark([$chunk], $hr_options) foreach my $chunk @$ar_data_points;
             $or_self->{query}->update_raw_bench_bundle_set_processed($i_id);
     };
     $or_self->{query}->finish_transaction( $@ );

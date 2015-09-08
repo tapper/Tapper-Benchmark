@@ -974,4 +974,16 @@ sub delete_benchmark_value {
 
 }
 
+# Garbage Collection
+sub delete_processed_raw_bench_bundles {
+
+    my ( $or_self, @a_vals ) = @_;
+
+    return $or_self->execute_query( "
+        DELETE FROM $or_self->{config}{tables}{additional_relation_table}
+        WHERE bench_value_id = ?
+    ", @a_vals );
+
+}
+
 1;

@@ -709,7 +709,6 @@ sub select_raw_bench_bundle_for_lock {
 
     my ( $or_self, @a_vals ) = @_;
 
-    use Data::Dumper; print Dumper(\@a_vals);
     return $or_self->execute_query( "
         SELECT raw_bench_bundle_id
         FROM raw_bench_bundles
@@ -976,6 +975,18 @@ sub delete_benchmark_value {
 
     return $or_self->execute_query( "
         DELETE FROM $or_self->{config}{tables}{benchmark_value_table}
+        WHERE bench_value_id = ?
+    ", @a_vals );
+
+}
+
+# Garbage Collection
+sub delete_processed_raw_bench_bundles {
+
+    my ( $or_self, @a_vals ) = @_;
+
+    return $or_self->execute_query( "
+        DELETE FROM $or_self->{config}{tables}{additional_relation_table}
         WHERE bench_value_id = ?
     ", @a_vals );
 
