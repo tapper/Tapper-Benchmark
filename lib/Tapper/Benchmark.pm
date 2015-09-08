@@ -401,7 +401,9 @@ sub gc {
 
     my ( $or_self, $hr_options ) = @_;
 
+    $or_self->{query}->start_transaction;
     $or_self->{query}->delete_processed_raw_bench_bundles;
+    $or_self->{query}->finish_transaction( $@ );
 }
 
 sub add_multi_benchmark {
