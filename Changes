@@ -1,6 +1,11 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+        - queuing mode for high-throughput incoming results
+          * part 1) adds raw results into separate table
+          * part 2) process one of those values,
+                    likely called in bundles or from multiple workers
+          * part 3) garbage collect successfully processed results
 
 0.006     2015-08-26
         - disable caching due to wrong behaviour
