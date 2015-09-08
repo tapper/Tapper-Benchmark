@@ -353,7 +353,7 @@ sub enqueue_multi_benchmark {
 
 }
 
-# deques a single bundle (can contain multiple data points)
+# dequeues a single bundle (can contain multiple data points)
 sub process_queued_multi_benchmark {
 
     my ( $or_self, $hr_options ) = @_;
@@ -1160,7 +1160,7 @@ Every "key" create a new nested hash.
     });
 
 
-=head3 select_benchmark_point_essentials
+=head3 get_single_benchmark_point
 
 Get a single data points from the database including all essential
 fields (NAME, VALUE, UNIT) and additional fields.
@@ -1175,6 +1175,49 @@ Get a list of all benchmark NAMEs, optionally matching a given pattern
 
  $benchmarkanythingdata = $or_bench->list_benchmark_names($pattern);
 
+=head3 enqueue_multi_benchmark
+
+As a low-latency alternative to directly calling
+L</add_multi_benchmark> there is a queuing functionality.
+
+The C<enqueue_multi_benchmark> function simply writes the raw incoming
+data structure serialized (and compressed) into a single row and
+returns. The complementary function to this is
+C<process_queued_multi_benchmark> which takes these values over using
+the real C<add_multi_benchmark> internally.
+
+=head3 process_queued_multi_benchmark
+
+This is part 2 of the low-latency queuing alternative to directly
+calling L</add_multi_benchmark>.
+
+It transactionally marks a single raw entry as being processed and
+then takes over its values by calling C<add_multi_benchmark>. It
+preserves the order of entries by inserting each chunk sequentially,
+to not confuse the IDs to the careful reader. After the bundle is
+taken over it is marked as processed.
+
+This function only handles one single raw entry. It is expected to
+called from co-operating multiple worker tasks or multiple times from
+a wrapper.
+
+Currently the original raw values are B<not> deleted immediately, just
+for safety reasons, until the transactional code is death-proof (and
+certified by Stuntman Mike). There is a dedicated funtion L/gc> for
+that cleanup.
+
+The function returns the ID of the processed raw entry.
+
+=head3 gc
+
+This calls garbage collection, in particular deletes raw entries
+created by C<process_queued_multi_benchmark> and already processed by
+C<process_queued_multi_benchmark>.
+
+It is separated from those processing just for safety reasons until
+the transactional code in there is waterproof.
+
+The gc function can cleanup more stuff in the future.
 
 =head3 subsume
 
