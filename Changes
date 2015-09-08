@@ -1,6 +1,8 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+
+0.007     2015-09-08
         - queuing mode for high-throughput incoming results
           * part 1) adds raw results into separate table
           * part 2) process one of those values,
