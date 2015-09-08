@@ -1,6 +1,8 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+
+0.008     2015-09-08
         - enable transactions for garbage collector
 
 0.007     2015-09-08
