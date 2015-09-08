@@ -396,6 +396,14 @@ sub process_queued_multi_benchmark {
 
 }
 
+# garbage collect - initially raw_bench_bundles, but also other stuff.
+sub gc {
+
+    my ( $or_self, $hr_options ) = @_;
+
+    $or_self->{query}->delete_processed_raw_bench_bundles;
+}
+
 sub add_multi_benchmark {
 
     my ( $or_self, $ar_data_points, $hr_options ) = @_;
