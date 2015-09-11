@@ -1,6 +1,8 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+
+0.009     2015-09-11
         - DB tuning/tweaking:
           * avoid deadlocks due to gap locking
           * fix missing finish_transaction
