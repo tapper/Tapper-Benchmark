@@ -153,8 +153,8 @@ CREATE TABLE `bench_backup_additional_relations` (
 ) ; -- COMMENT='add additional values to benchmarks';
 
 CREATE TABLE `raw_bench_bundles` (
- `raw_bench_bundle_id` INTEGER PRIMARY KEY NOT NULL,
- `raw_bench_bundle_serialized` TEXT NOT NULL,
+ `raw_bench_bundle_id` INT(10) PRIMARY KEY NOT NULL,
+ `raw_bench_bundle_serialized` BLOB NOT NULL,
  `processing` tinyint(3) NOT NULL DEFAULT 0 , -- COMMENT 'is entry processed (0=no,1=yes)',
  `processed` tinyint(3) NOT NULL DEFAULT 0 , -- COMMENT 'is entry processed (0=no,1=yes)',
  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP -- COMMENT 'creation date'
