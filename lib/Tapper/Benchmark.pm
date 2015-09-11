@@ -371,7 +371,10 @@ sub process_queued_multi_benchmark {
             $ar_results = $or_self->{query}->select_raw_bench_bundle_for_lock;
             $or_result  = $ar_results->fetchrow_hashref;
             $i_id       = $or_result->{raw_bench_bundle_id};
-            goto RETURN unless $i_id;
+            if (!$i_id) {
+                    $or_self->{query}->finish_transaction( $@ );
+                    goto RETURN ;
+            }
             $or_self->{query}->start_processing_raw_bench_bundle($i_id);
     };
     $or_self->{query}->finish_transaction( $@ );
@@ -401,9 +404,7 @@ sub gc {
 
     my ( $or_self, $hr_options ) = @_;
 
-    $or_self->{query}->start_transaction;
     $or_self->{query}->delete_processed_raw_bench_bundles;
-    $or_self->{query}->finish_transaction( $@ );
 }
 
 sub add_multi_benchmark {
