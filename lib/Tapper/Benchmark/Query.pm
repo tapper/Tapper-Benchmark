@@ -67,7 +67,7 @@ sub start_transaction {
     local $or_self->{dbh}{RaiseError} = 1;
 
     eval {
-        push @{$or_self->{old_AutoCommit}}, $or_self->{dbh}{AutoCommit}; # allow nested transactions (does this make sense)
+        $or_self->{old_AutoCommit} = $or_self->{dbh}{AutoCommit};
         $or_self->{dbh}{AutoCommit} = 0;
     };
     if ( $@ ) {
@@ -101,8 +101,7 @@ sub finish_transaction {
             $or_self->{dbh}->commit();
         }
 
-        my $old_AutoCommits = $or_self->{old_AutoCommit}; # reference, to change it
-        $or_self->{dbh}{AutoCommit} = pop @$old_AutoCommits if @$old_AutoCommits;
+        $or_self->{dbh}{AutoCommit} = $or_self->{old_AutoCommit};
 
     }
 
