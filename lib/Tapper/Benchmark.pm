@@ -142,6 +142,7 @@ sub new {
     else {
         $or_self->{query} = $s_module->new({
             dbh    => $hr_atts->{dbh},
+            driver => $hr_atts->{dbh}{Driver}{Name},
             debug  => $hr_atts->{debug} || 0,
             config => $or_self->{config},
         });
@@ -363,9 +364,11 @@ sub process_queued_multi_benchmark {
     my $ar_data_points;
     my $ar_results;
     my $or_result;
+    my $driver = $or_self->{query}{driver};
 
     # ===== exclusively pick single raw entry =====
     # Lock single row via processing=1 so that only one worker handles it!
+    $or_self->{query}{dbh}->do("set transaction isolation level read committed") if $driver eq "mysql"; # avoid deadlocks due to gap locking
     $or_self->{query}->start_transaction;
     eval {
             $ar_results = $or_self->{query}->select_raw_bench_bundle_for_lock;
@@ -373,11 +376,13 @@ sub process_queued_multi_benchmark {
             $i_id       = $or_result->{raw_bench_bundle_id};
             if (!$i_id) {
                     $or_self->{query}->finish_transaction( $@ );
+                    $or_self->{query}{dbh}->do("set transaction isolation level repeatable read") if $driver eq "mysql"; # reset to normal gap locking
                     goto RETURN ;
             }
             $or_self->{query}->start_processing_raw_bench_bundle($i_id);
     };
     $or_self->{query}->finish_transaction( $@ );
+    $or_self->{query}{dbh}->do("set transaction isolation level repeatable read") if $driver eq "mysql"; # reset to normal gap locking
 
     # ===== process that single raw entry =====
     $or_self->{query}->start_transaction;
