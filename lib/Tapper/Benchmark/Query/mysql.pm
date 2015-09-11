@@ -728,6 +728,7 @@ sub select_raw_bench_bundle_for_processing {
         SELECT raw_bench_bundle_serialized
         FROM raw_bench_bundles
         WHERE raw_bench_bundle_id = ?
+        LIMIT 1
         FOR UPDATE
     ", @a_vals );
 }
