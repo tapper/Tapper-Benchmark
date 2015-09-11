@@ -1,6 +1,11 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+        - DB tuning/tweaking:
+          * avoid deadlocks due to gap locking
+          * fix missing finish_transaction
+          * be crisp about UNSIGNED and use BLOB for raw queue
+          * simplify resetting of AutoCommit mode
 
 0.008     2015-09-08
         - enable transactions for garbage collector
