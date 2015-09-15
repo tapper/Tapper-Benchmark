@@ -1,6 +1,7 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+        - drop feature 'switch' - replace given/when with classic if/else
 
 0.009     2015-09-11
         - DB tuning/tweaking:
