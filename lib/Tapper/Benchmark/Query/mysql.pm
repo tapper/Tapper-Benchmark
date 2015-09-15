@@ -3,7 +3,6 @@ package Tapper::Benchmark::Query::mysql;
 
 use strict;
 use warnings;
-use feature 'switch';
 use base 'Tapper::Benchmark::Query';
 
 use List::MoreUtils qw( any );
@@ -79,8 +78,7 @@ sub create_select_column {
     my $s_return_select       = q##;
 
     AGGR: {
-        given( $s_aggr ) {
-            when ( q##   ) {
+            if ( $s_aggr eq q##   ) {
                 # aggregate all columns if a single column is aggregated
                 if ( $b_aggregate_all ) {
                     $s_aggr = $or_self->{config}{default_aggregation};
@@ -88,33 +86,32 @@ sub create_select_column {
                 }
                 $s_return_select = '${COLUMN}';
             }
-            when ( 'min' ) {
+            elsif ( $s_aggr eq 'min' ) {
                 $s_return_select = 'MIN( ${COLUMN} )';
             }
-            when ( 'max' ) {
+            elsif ( $s_aggr eq 'max' ) {
                 $s_return_select = 'MAX( ${COLUMN} )';
             }
-            when ( 'avg' ) {
+            elsif ( $s_aggr eq 'avg' ) {
                 $s_return_select = 'AVG( ${COLUMN} )';
             }
-            when ( 'gem' ) {
+            elsif ( $s_aggr eq 'gem' ) {
                 $s_return_select = 'EXP( SUM( LOG( ${COLUMN} ) ) / COUNT( ${COLUMN} ) )';
             }
-            when ( 'sum' ) {
+            elsif ( $s_aggr eq 'sum' ) {
                 $s_return_select = 'SUM( ${COLUMN} )';
             }
-            when ( 'cnt' ) {
+            elsif ( $s_aggr eq 'cnt' ) {
                 $s_return_select = 'COUNT( ${COLUMN} )';
             }
-            when ( 'cnd' ) {
+            elsif ( $s_aggr eq 'cnd' ) {
                 $s_return_select = 'COUNT( DISTINCT ${COLUMN} )';
             }
-            default {
+            else {
                 require Carp;
                 Carp::confess("unknown aggregate function '$s_aggr'");
                 return;
             }
-        }
     } # AGGR
 
     my ( $s_return_column );
