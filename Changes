@@ -1,6 +1,8 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+
+0.011     2015-09-16
         - let the db take care of compression in raw queue
 
 0.010     2015-09-15
