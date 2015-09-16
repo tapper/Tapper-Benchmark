@@ -1,6 +1,7 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+        - let the db take care of compression in raw queue
 
 0.010     2015-09-15
         - drop feature 'switch' - replace given/when with classic if/else
