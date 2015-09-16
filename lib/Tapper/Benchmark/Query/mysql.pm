@@ -1,5 +1,5 @@
 package Tapper::Benchmark::Query::mysql;
-# ABSTRACT: Tapper::Benchmark - qerying - MySQL backend
+# ABSTRACT: Tapper::Benchmark - querying - MySQL backend
 
 use strict;
 use warnings;

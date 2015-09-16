@@ -1,5 +1,5 @@
 package Tapper::Benchmark::Query::SQLite;
-# ABSTRACT: Tapper::Benchmark - qerying - SQLite backend
+# ABSTRACT: Tapper::Benchmark - querying - SQLite backend
 
 use strict;
 use warnings;
