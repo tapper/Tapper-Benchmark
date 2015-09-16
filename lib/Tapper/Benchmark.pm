@@ -364,7 +364,7 @@ sub process_queued_multi_benchmark {
     my $ar_data_points;
     my $ar_results;
     my $or_result;
-    my $driver = $or_self->{query}{driver};
+    my $driver = $or_self->{query}{dbh}{Driver}{Name};
 
     # ===== exclusively pick single raw entry =====
     # Lock single row via processing=1 so that only one worker handles it!
