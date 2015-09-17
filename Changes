@@ -1,6 +1,8 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+
+0.012     2015-09-17
         - refactor common methods between db backends
 
 0.011     2015-09-16
