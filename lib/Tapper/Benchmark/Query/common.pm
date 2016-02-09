@@ -16,6 +16,10 @@ my %h_default_columns = (
     'CREATED'   => 'bv.created_at',
 );
 
+sub _NOW { "CURRENT_TIMESTAMP" }
+
+sub _FOR_UPDATE { "FOR UPDATE" }
+
 sub default_columns {
     return %h_default_columns;
 }
@@ -526,6 +530,59 @@ sub delete_processed_raw_bench_bundles {
               processing=0
     ", @a_vals );
 
+}
+
+sub copy_additional_values {
+
+    my ( $or_self, $hr_vals ) = @_;
+
+    for my $s_param (qw/ new_bench_value_id old_bench_value_id /) {
+        if (! $hr_vals->{$s_param} ) {
+            require Carp;
+            Carp::confess("missing parameter '$s_param'");
+            return;
+        }
+    }
+
+    return $or_self->execute_query( "
+        INSERT INTO $or_self->{config}{tables}{additional_relation_table}
+            ( bench_value_id, bench_additional_value_id, active, created_at )
+        SELECT
+            ?, bench_additional_value_id, 1, @{[$or_self->_NOW]}
+        FROM
+            $or_self->{config}{tables}{additional_relation_table}
+        WHERE
+            bench_value_id = ?
+    ", @{$hr_vals}{qw/ new_bench_value_id old_bench_value_id /} );
+
+}
+
+sub select_raw_bench_bundle_for_lock {
+
+    my ( $or_self, @a_vals ) = @_;
+
+    return $or_self->execute_query( "
+        SELECT raw_bench_bundle_id
+        FROM raw_bench_bundles
+        WHERE processed=0 AND
+              processing=0
+        ORDER BY raw_bench_bundle_id ASC
+        LIMIT 1
+        @{[$or_self->_FOR_UPDATE]}
+    ", @a_vals );
+}
+
+sub select_raw_bench_bundle_for_processing {
+
+    my ( $or_self, @a_vals ) = @_;
+
+    return $or_self->execute_query( "
+        SELECT raw_bench_bundle_serialized
+        FROM raw_bench_bundles
+        WHERE raw_bench_bundle_id = ?
+        LIMIT 1
+        @{[$or_self->_FOR_UPDATE]}
+    ", @a_vals );
 }
 
 1;
