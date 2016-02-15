@@ -1,6 +1,8 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
+
+5.0.0     2016-02-15
         - bring in sync with BenchmarkAnything
 
 0.012     2015-09-17
